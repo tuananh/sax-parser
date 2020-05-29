@@ -47,11 +47,11 @@ parser.on('comment', (comment) => {
 })
 
 parser.on('startDocument', () => {
-    console.log('end')
+    console.log('startDocument')
 })
 
 parser.on('endDocument', () => {
-    console.log('end')
+    console.log('endDocument')
 })
 
 const xml = readFileSync(__dirname + '/test/fixtures/menu.xml', 'utf-8')
