@@ -55,6 +55,12 @@ namespace saxparser
             _sax3Handler.xml_comment_cb = [=](const char *s, size_t len) {
                 SAXParser::commentHandler(_saxParserImpl, (const XML_CHAR *)s, len);
             };
+            _sax3Handler.xml_start_document_cb = [=]() {
+                SAXParser::startDocument(_saxParserImpl);
+            };
+            _sax3Handler.xml_end_document_cb = [=]() {
+                SAXParser::endDocument(_saxParserImpl);
+            };
         };
 
         void setSAXParserImp(SAXParser *parser)
@@ -151,6 +157,14 @@ namespace saxparser
     void SAXParser::commentHandler(void *ctx, const XML_CHAR *comment, size_t len)
     {
         ((SAXParser *)(ctx))->_delegator->commentHandler(ctx, (char *)comment, len);
+    }
+    void SAXParser::startDocument(void *ctx)
+    {
+        ((SAXParser *)(ctx))->_delegator->startDocument(ctx);
+    }
+    void SAXParser::endDocument(void *ctx)
+    {
+        ((SAXParser *)(ctx))->_delegator->endDocument(ctx);
     }
     void SAXParser::setDelegator(SAXDelegator *delegator)
     {

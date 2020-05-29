@@ -65,6 +65,14 @@ public:
   {
     this->emitEvent("comment", std::string(s, len));
   }
+  virtual void startDocument(void *ctx)
+  {
+    this->emitEvent("startDocument");
+  }
+  virtual void endDocument(void *ctx)
+  {
+    this->emitEvent("endDocument");
+  }
 
 private:
   const Napi::CallbackInfo *_cbInfo;

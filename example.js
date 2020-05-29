@@ -46,7 +46,11 @@ parser.on('comment', (comment) => {
     console.log(`<!--${comment}-->`)
 })
 
-parser.on('end', () => {
+parser.on('startDocument', () => {
+    console.log('end')
+})
+
+parser.on('endDocument', () => {
     console.log('end')
 })
 

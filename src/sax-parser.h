@@ -42,6 +42,8 @@ namespace saxparser
         virtual void textHandler(void *ctx, const char *s, size_t len) = 0;
         virtual void cdataHandler(void *ctx, const char *s, size_t len) = 0;
         virtual void commentHandler(void *ctx, const char *s, size_t len) = 0;
+        virtual void startDocument(void *ctx) = 0;
+        virtual void endDocument(void *ctx) = 0;
     };
 
     class SAXParser
@@ -63,6 +65,8 @@ namespace saxparser
         static void endAttribute(void *ctx);
         static void cdataHandler(void *ctx, const XML_CHAR *cdata, size_t len);
         static void commentHandler(void *ctx, const XML_CHAR *comment, size_t len);
+        static void startDocument(void *ctx);
+        static void endDocument(void *ctx);
     };
 
 } // namespace saxparser
