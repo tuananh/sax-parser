@@ -10,8 +10,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "benchmark": "^2.1.4",
     "bindings": "^1.5.0",
-    "node-addon-api": "^3.0.0"
+    "libxmljs": "^0.19.7",
+    "ltx": "^2.9.2",
+    "node-addon-api": "^3.0.0",
+    "node-expat": "^2.3.18",
+    "node-xml": "^1.0.2"
   },
   "devDependencies": {
     "ava": "^3.8.2",

@@ -58,5 +58,5 @@ parser.on('endDocument', () => {
     console.log('=== END ===')
 })
 
-const xml = readFileSync(__dirname + '/test/fixtures/menu.xml', 'utf-8')
+const xml = readFileSync(__dirname + '/benchmark/test.xml', 'utf-8')
 parser.parse(xml)
