@@ -1,0 +1,4 @@
+[submodule "vendor/xsxml"]
+	path = vendor/xsxml
+	url = https://github.com/tuananh/xsxml.git
+	branch = master
