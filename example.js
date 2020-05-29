@@ -46,6 +46,10 @@ parser.on('comment', (comment) => {
     console.log(`<!--${comment}-->`)
 })
 
+parser.on('doctype', (doctype) => {
+    console.log('doctype', doctype)
+})
+
 parser.on('startDocument', () => {
     console.log('startDocument')
 })

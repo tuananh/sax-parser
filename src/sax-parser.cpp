@@ -61,6 +61,9 @@ namespace saxparser
             _sax3Handler.xml_end_document_cb = [=]() {
                 SAXParser::endDocument(_saxParserImpl);
             };
+            _sax3Handler.xml_doctype_cb = [=](const char *s, size_t len) {
+                SAXParser::doctypeHandler(_saxParserImpl, (const XML_CHAR *)s, len);
+            };
         };
 
         void setSAXParserImp(SAXParser *parser)
@@ -165,6 +168,10 @@ namespace saxparser
     void SAXParser::endDocument(void *ctx)
     {
         ((SAXParser *)(ctx))->_delegator->endDocument(ctx);
+    }
+    void SAXParser::doctypeHandler(void *ctx, const XML_CHAR *doctype, size_t len)
+    {
+        ((SAXParser *)(ctx))->_delegator->doctypeHandler(ctx, (char *)doctype, len);
     }
     void SAXParser::setDelegator(SAXDelegator *delegator)
     {

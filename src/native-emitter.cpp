@@ -73,6 +73,10 @@ public:
   {
     this->emitEvent("endDocument");
   }
+  virtual void doctypeHandler(void *ctx, const char *doctype, size_t len)
+  {
+    this->emitEvent("doctype", std::string(doctype, len));
+  }
 
 private:
   const Napi::CallbackInfo *_cbInfo;
