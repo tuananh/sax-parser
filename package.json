@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "ava": "^3.8.2",
-    "node-gyp": "^5.1.1"
+    "node-gyp": "^5.1.1",
+    "sax": "^1.2.4"
   }
 }
