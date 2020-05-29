@@ -47,15 +47,15 @@ parser.on('comment', (comment) => {
 })
 
 parser.on('doctype', (doctype) => {
-    console.log('doctype', doctype)
+    console.log(`<!DOCTYPE ${doctype}>`);
 })
 
 parser.on('startDocument', () => {
-    console.log('startDocument')
+    console.log('=== START ===')
 })
 
 parser.on('endDocument', () => {
-    console.log('endDocument')
+    console.log('=== END ===')
 })
 
 const xml = readFileSync(__dirname + '/test/fixtures/menu.xml', 'utf-8')
