@@ -61,6 +61,10 @@ public:
   {
     this->emitEvent("cdata", std::string(s, len));
   }
+  virtual void commentHandler(void *ctx, const char *s, size_t len)
+  {
+    this->emitEvent("comment", std::string(s, len));
+  }
 
 private:
   const Napi::CallbackInfo *_cbInfo;

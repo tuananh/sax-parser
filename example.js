@@ -42,6 +42,10 @@ parser.on('cdata', (text) => {
     console.log(str)
 })
 
+parser.on('comment', (comment) => {
+    console.log(`<!--${comment}-->`)
+})
+
 parser.on('end', () => {
     console.log('end')
 })

@@ -6,6 +6,7 @@
     <sometext>
       <![CDATA[They're saying "x < y" & that "z > y" so I guess that means that z > x]]>
     </sometext>
+    <!--This is example of comment in XML-->
     <price>$5.95</price>
     <description>Two of our famous Belgian Waffles with plenty of real maple syrup</description>
     <calories>650</calories>
