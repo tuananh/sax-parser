@@ -1,7 +1,7 @@
 {
-  "name": "sax-parser",
-  "version": "1.0.0",
-  "description": "",
+  "name": "@tuananh/sax-parser",
+  "version": "0.0.1",
+  "description": "an attempt to write a simple, fast SAX parser for Node.js",
   "main": "index.js",
   "scripts": {
     "test": "ava",
