@@ -57,6 +57,17 @@ parser.on('endAttribute', () => {
     console.log('endAttribute')
 })
 
+parser.on('cdata', (text) => {
+    let str = ''
+    for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
+    str += `<![CDATA[${text}]]>`
+    console.log(str)
+})
+
+parser.on('comment', (comment) => {
+    console.log(`<!--${comment}-->`)
+})
+
 parser.on('end', () => {
     console.log('end')
 })
@@ -67,12 +78,16 @@ parser.parse(xml)
 
 output
 
-```sh
-<breakfast_menu>
+```xml
+ <breakfast_menu>
    <food>
      <name>
         Belgian Waffles
      <name>
+     <sometext>
+        <![CDATA[They're saying "x < y" & that "z > y" so I guess that means that z > x]]>
+     <sometext>
+<!--This is example of comment in XML-->
      <price>
         $5.95
      <price>
