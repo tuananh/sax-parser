@@ -7,16 +7,14 @@ It's a very much work-in-progress now. Nothing works yet.
 
 An attempt to write a fast SAX parser for Node.js. Native module for performance reason.
 
-## Development
+## Installation
 
 ```sh
-git clone git@github.com:tuananh/sax-parser.git
-cd sax-parser
-git submodule init
-npm install
-npm run build
-node example.js
+yarn add @tuananh/sax-parser
+# npm install @tuananh/sax-parser
 ```
+
+## Usage
 
 `example.js`
 ```js
@@ -155,6 +153,20 @@ output
      <calories>
    <food>
  <breakfast_menu>
+```
+
+## Development
+
+You will need to have all `node-gyp`'s requirements installed.
+
+```sh
+git clone git@github.com:tuananh/sax-parser.git
+cd sax-parser
+git submodule init
+npm install
+npm run build
+node example.js
+npm run test
 ```
 
 ## Credits
