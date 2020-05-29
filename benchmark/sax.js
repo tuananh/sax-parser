@@ -6,14 +6,19 @@ const parser = sax.parser(true) // strict
 let done = 0
 const ITERATION = 100000
 
-console.log('Running %s iterations of parser.parse()', ITERATION.toLocaleString());
+console.log(
+    'Running %s iterations of parser.parse()',
+    ITERATION.toLocaleString()
+)
 
-console.time('benchmark')
-
+const start = process.hrtime()
 parser.onend = function () {
     done++
     if (done === ITERATION) {
-        console.timeEnd('benchmark')
+        // end[0] is in seconds, end[1] is in nanoseconds
+        const end = process.hrtime(start)
+        const timeInMs = (end[0] * 1000000000 + end[1]) / 1000000
+        console.log('Finished %s in %s ms', ITERATION.toLocaleString(), timeInMs.toFixed(2))
     }
 }
 
