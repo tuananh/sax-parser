@@ -1,7 +1,7 @@
 #include <vector> // because its based on windows 8 build :P
 #include "sax-parser.h"
-// #include "../vendor/xsxml/xsxml/no-recursive/xsxml.hpp"
-#include "../vendor/xsxml/xsxml/xsxml.hpp"
+#include "../vendor/xsxml/xsxml/no-recursive/xsxml.hpp"
+// #include "../vendor/xsxml/xsxml/xsxml.hpp"
 
 namespace saxparser
 {
