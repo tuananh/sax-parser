@@ -8,7 +8,7 @@ parser.on('startElement', (name) => {
     let str = ''
     for (let i = 0; i < depth; ++i) str += '  ' // indentation
     str += `<${name}>`
-    console.log('', str)
+    process.stdout.write(str + '\n')
     depth++
 })
 
@@ -16,7 +16,7 @@ parser.on('text', (text) => {
     let str = ''
     for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
     str += text
-    console.log(str)
+    process.stdout.write(str + '\n')
 })
 
 parser.on('endElement', (name) => {
@@ -24,38 +24,39 @@ parser.on('endElement', (name) => {
     let str = ''
     for (let i = 0; i < depth; ++i) str += '  ' // indentation
     str += `<${name}>`
-    console.log('', str)
+    process.stdout.write(str + '\n')
 })
 
 parser.on('startAttribute', (name, value) => {
-    console.log('startAttribute', name, value)
+    // console.log('startAttribute', name, value)
 })
 
 parser.on('endAttribute', () => {
-    console.log('endAttribute')
+    // console.log('endAttribute')
 })
 
 parser.on('cdata', (cdata) => {
     let str = ''
     for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
     str += `<![CDATA[${cdata}]]>`
-    console.log(str)
+    process.stdout.write(str)
+    process.stdout.write('\n')
 })
 
 parser.on('comment', (comment) => {
-    console.log(`<!--${comment}-->`)
+    process.stdout.write(`<!--${comment}-->\n`)
 })
 
 parser.on('doctype', (doctype) => {
-    console.log(`<!DOCTYPE ${doctype}>`)
+    process.stdout.write(`<!DOCTYPE ${doctype}>\n`)
 })
 
 parser.on('startDocument', () => {
-    console.log(`<!--=== START ===-->`)
+    process.stdout.write(`<!--=== START ===-->\n`)
 })
 
 parser.on('endDocument', () => {
-    console.log(`<!--=== END ===-->`)
+    process.stdout.write(`<!--=== END ===-->`)
 })
 
 const xml = readFileSync(__dirname + '/benchmark/test.xml', 'utf-8')

@@ -32,7 +32,7 @@ Fastest is ltx
 
 ## Usage
 
-See `example.js` for an example how to use `@tuananh/sax-parser` to pretty print XML.
+See [`example.js`](example.js) for an example how to use `@tuananh/sax-parser` to pretty print XML to `process.stdout`
 
 ```js
 const { readFileSync } = require('fs')
@@ -45,7 +45,7 @@ parser.on('startElement', (name) => {
     let str = ''
     for (let i = 0; i < depth; ++i) str += '  ' // indentation
     str += `<${name}>`
-    console.log('', str)
+    process.stdout.write(str + '\n')
     depth++
 })
 
@@ -53,7 +53,7 @@ parser.on('text', (text) => {
     let str = ''
     for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
     str += text
-    console.log(str)
+    process.stdout.write(str + '\n')
 })
 
 parser.on('endElement', (name) => {
@@ -61,38 +61,39 @@ parser.on('endElement', (name) => {
     let str = ''
     for (let i = 0; i < depth; ++i) str += '  ' // indentation
     str += `<${name}>`
-    console.log('', str)
+    process.stdout.write(str + '\n')
 })
 
 parser.on('startAttribute', (name, value) => {
-    console.log('startAttribute', name, value)
+    // console.log('startAttribute', name, value)
 })
 
 parser.on('endAttribute', () => {
-    console.log('endAttribute')
+    // console.log('endAttribute')
 })
 
 parser.on('cdata', (cdata) => {
     let str = ''
     for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
     str += `<![CDATA[${cdata}]]>`
-    console.log(str)
+    process.stdout.write(str)
+    process.stdout.write('\n')
 })
 
 parser.on('comment', (comment) => {
-    console.log(`<!--${comment}-->`)
+    process.stdout.write(`<!--${comment}-->\n`)
 })
 
 parser.on('doctype', (doctype) => {
-    console.log(`<!DOCTYPE ${doctype}>`)
+    process.stdout.write(`<!DOCTYPE ${doctype}>\n`)
 })
 
 parser.on('startDocument', () => {
-    console.log(`<!--=== START ===-->`)
+    process.stdout.write(`<!--=== START ===-->\n`)
 })
 
 parser.on('endDocument', () => {
-    console.log(`<!--=== END ===-->`)
+    process.stdout.write(`<!--=== END ===-->`)
 })
 
 const xml = readFileSync(__dirname + '/benchmark/test.xml', 'utf-8')
@@ -103,82 +104,82 @@ output
 
 ```xml
 <!--=== START ===-->
- <breakfast_menu>
-   <food>
-     <name>
+<breakfast_menu>
+  <food>
+    <name>
         Belgian Waffles
-     <name>
-     <sometext>
+    <name>
+    <sometext>
         <![CDATA[They're saying "x < y" & that "z > y" so I guess that means that z > x]]>
-     <sometext>
+    <sometext>
 <!--This is example of comment in XML-->
-     <price>
+    <price>
         $5.95
-     <price>
-     <description>
+    <price>
+    <description>
         Two of our famous Belgian Waffles with plenty of real maple syrup
-     <description>
-     <calories>
+    <description>
+    <calories>
         650
-     <calories>
-   <food>
-   <food>
-     <name>
+    <calories>
+  <food>
+  <food>
+    <name>
         Strawberry Belgian Waffles
-     <name>
-     <price>
+    <name>
+    <price>
         $7.95
-     <price>
-     <description>
+    <price>
+    <description>
         Light Belgian waffles covered with strawberries and whipped cream
-     <description>
-     <calories>
+    <description>
+    <calories>
         900
-     <calories>
-   <food>
-   <food>
-     <name>
+    <calories>
+  <food>
+  <food>
+    <name>
         Berry-Berry Belgian Waffles
-     <name>
-     <price>
+    <name>
+    <price>
         $8.95
-     <price>
-     <description>
+    <price>
+    <description>
         Light Belgian waffles covered with an assortment of fresh berries and whipped cream
-     <description>
-     <calories>
+    <description>
+    <calories>
         900
-     <calories>
-   <food>
-   <food>
-     <name>
+    <calories>
+  <food>
+  <food>
+    <name>
         French Toast
-     <name>
-     <price>
+    <name>
+    <price>
         $4.50
-     <price>
-     <description>
+    <price>
+    <description>
         Thick slices made from our homemade sourdough bread
-     <description>
-     <calories>
+    <description>
+    <calories>
         600
-     <calories>
-   <food>
-   <food>
-     <name>
+    <calories>
+  <food>
+  <food>
+    <name>
         Homestyle Breakfast
-     <name>
-     <price>
+    <name>
+    <price>
         $6.95
-     <price>
-     <description>
+    <price>
+    <description>
         Two eggs, bacon or sausage, toast, and our ever-popular hash browns
-     <description>
-     <calories>
+    <description>
+    <calories>
         950
-     <calories>
-   <food>
- <breakfast_menu>
+    <calories>
+  <food>
+<breakfast_menu>
 <!--=== END ===-->
 ```
 
