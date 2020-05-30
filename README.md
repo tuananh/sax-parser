@@ -32,7 +32,7 @@ Fastest is ltx
 
 ## Usage
 
-See `example.js` for an example of use `@tuananh/sax-parser` to pretty print XML.
+See `example.js` for an example how to use `@tuananh/sax-parser` to pretty print XML.
 
 ```js
 const { readFileSync } = require('fs')
