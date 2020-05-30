@@ -1,12 +1,18 @@
 {
   "name": "@tuananh/sax-parser",
   "version": "0.0.1",
-  "description": "an attempt to write a simple, fast SAX parser for Node.js",
+  "description": "A very fast SAX parser for Node.js, written in C++.",
   "main": "index.js",
   "scripts": {
     "test": "ava",
     "build": "node-gyp rebuild"
   },
+  "files": [
+    "src/**",
+    "vendor/**",
+    "index.js",
+    "binding.gyp"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
