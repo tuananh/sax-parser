@@ -6,6 +6,7 @@ const nodeXml = require('node-xml')
 let libxml = null
 const expat = require('node-expat')
 const sax = require('sax')
+const LtxSaxParser = require('ltx/lib/parsers/ltx')
 const MySaxParser = require('..')
 const xml = readFileSync(__dirname + '/test.xml', 'utf-8')
 
@@ -53,11 +54,23 @@ function ExpatParser() {
     this.name = 'node-expat'
 }
 
-const parsers = [SaxParser, ThisSaxParser, NodeXmlParser, ExpatParser].map(
-    function (Parser) {
-        return new Parser()
+function LtxParser() {
+    var parser = new LtxSaxParser()
+    this.parse = function (s) {
+        parser.write(s)
     }
-)
+    this.name = 'ltx'
+}
+
+const parsers = [
+    SaxParser,
+    ThisSaxParser,
+    NodeXmlParser,
+    ExpatParser,
+    LtxParser,
+].map(function (Parser) {
+    return new Parser()
+})
 
 if (libxml) {
     parsers.push(new LibXmlJsParser())

@@ -14,13 +14,13 @@
     "node-addon-api": "^3.0.0"
   },
   "devDependencies": {
+    "ava": "^3.8.2",
     "benchmark": "^2.1.4",
-    "node-expat": "^2.3.18",
-    "node-xml": "^1.0.2",
     "libxmljs": "^0.19.7",
     "ltx": "^2.9.2",
-    "ava": "^3.8.2",
+    "node-expat": "^2.3.18",
     "node-gyp": "^5.1.1",
+    "node-xml": "^1.0.2",
     "sax": "^1.2.4"
   }
 }

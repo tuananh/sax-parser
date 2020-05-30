@@ -35,10 +35,10 @@ parser.on('endAttribute', () => {
     console.log('endAttribute')
 })
 
-parser.on('cdata', (text) => {
+parser.on('cdata', (cdata) => {
     let str = ''
     for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
-    str += `<![CDATA[${text}]]>`
+    str += `<![CDATA[${cdata}]]>`
     console.log(str)
 })
 
@@ -47,15 +47,15 @@ parser.on('comment', (comment) => {
 })
 
 parser.on('doctype', (doctype) => {
-    console.log(`<!DOCTYPE ${doctype}>`);
+    console.log(`<!DOCTYPE ${doctype}>`)
 })
 
 parser.on('startDocument', () => {
-    console.log('=== START ===')
+    console.log(`<!--=== START ===-->`)
 })
 
 parser.on('endDocument', () => {
-    console.log('=== END ===')
+    console.log(`<!--=== END ===-->`)
 })
 
 const xml = readFileSync(__dirname + '/benchmark/test.xml', 'utf-8')

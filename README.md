@@ -1,11 +1,11 @@
 sax-parser
 ==========
 
-It's a very much work-in-progress now. Nothing works yet.
+🚨 ALPHA STATE: This is a very much work-in-progress now.
 
 ## What this is
 
-An attempt to write a fast SAX parser for Node.js. Native module for performance reason.
+A very fast SAX parser for Node.js written in C++. Native module for performance reason.
 
 ## Installation
 
@@ -14,9 +14,26 @@ yarn add @tuananh/sax-parser
 # npm install @tuananh/sax-parser
 ```
 
+## Benchmark
+
+`ltx` package is fastest, win by almost 2 (~1.8) order of magnitude compare with the second fastest (`@tuananh/sax-parser`). However, `ltx` is not fully compliant with XML spec. I still include `ltx` here for reference. If it works for you, use this.
+
+```sh
+node benchmark
+
+sax x 14,277 ops/sec ±0.73% (87 runs sampled)
+@tuananh/sax-parser x 45,779 ops/sec ±0.85% (85 runs sampled)
+node-xml x 4,335 ops/sec ±0.51% (86 runs sampled)
+node-expat x 13,028 ops/sec ±0.39% (88 runs sampled)
+ltx x 81,722 ops/sec ±0.73% (89 runs sampled)
+libxmljs x 8,927 ops/sec ±1.02% (88 runs sampled)
+Fastest is ltx
+```
+
 ## Usage
 
-`example.js`
+See `example.js` for an example of use `@tuananh/sax-parser` to pretty print XML.
+
 ```js
 const { readFileSync } = require('fs')
 const SaxParser = require('.')
@@ -55,10 +72,10 @@ parser.on('endAttribute', () => {
     console.log('endAttribute')
 })
 
-parser.on('cdata', (text) => {
+parser.on('cdata', (cdata) => {
     let str = ''
     for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
-    str += `<![CDATA[${text}]]>`
+    str += `<![CDATA[${cdata}]]>`
     console.log(str)
 })
 
@@ -66,17 +83,26 @@ parser.on('comment', (comment) => {
     console.log(`<!--${comment}-->`)
 })
 
-parser.on('end', () => {
-    console.log('end')
+parser.on('doctype', (doctype) => {
+    console.log(`<!DOCTYPE ${doctype}>`)
 })
 
-const xml = readFileSync(__dirname + '/test/fixtures/menu.xml', 'utf-8')
+parser.on('startDocument', () => {
+    console.log(`<!--=== START ===-->`)
+})
+
+parser.on('endDocument', () => {
+    console.log(`<!--=== END ===-->`)
+})
+
+const xml = readFileSync(__dirname + '/benchmark/test.xml', 'utf-8')
 parser.parse(xml)
 ```
 
 output
 
 ```xml
+<!--=== START ===-->
  <breakfast_menu>
    <food>
      <name>
@@ -153,6 +179,7 @@ output
      <calories>
    <food>
  <breakfast_menu>
+<!--=== END ===-->
 ```
 
 ## Development
