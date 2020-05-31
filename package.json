@@ -6,7 +6,8 @@
   "scripts": {
     "test": "ava",
     "build": "node-gyp rebuild",
-    "install": "node-gyp rebuild"
+    "install": "node-gyp rebuild",
+    "benchmark": "node benchmark"
   },
   "files": [
     "src/**",

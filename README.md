@@ -1,5 +1,10 @@
 sax-parser
+![npm version](https://badgen.net/npm/v/@tuananh/sax-parser)
+![github actions ci](https://github.com/tuananh/sax-parser/workflows/CI/badge.svg)
+![license](https://badgen.net/npm/license/@tuananh/sax-parser)
 ==========
+
+
 
 🚨 ALPHA STATE: This is a very much work-in-progress now.
 
@@ -16,10 +21,12 @@ yarn add @tuananh/sax-parser
 
 ## Benchmark
 
+I use the `benchmark.js` script from [node-expat repo](https://github.com/astro/node-expat/blob/master/benchmark.js) and add few more alternatives for comparison.
+
 `ltx` package is fastest, win by almost 2 (~1.8) order of magnitude compare with the second fastest (`@tuananh/sax-parser`). However, `ltx` is not fully compliant with XML spec. I still include `ltx` here for reference. If `ltx` works for you, use it.
 
 ```sh
-node benchmark
+npm run benchmark
 
 sax x 14,277 ops/sec ±0.73% (87 runs sampled)
 @tuananh/sax-parser x 45,779 ops/sec ±0.85% (85 runs sampled)
@@ -29,6 +36,17 @@ ltx x 81,722 ops/sec ±0.73% (89 runs sampled)
 libxmljs x 8,927 ops/sec ±1.02% (88 runs sampled)
 Fastest is ltx
 ```
+
+| module              | ops/sec | native | XML compliant | stream |
+|---------------------|---------|--------|---------------|--------|
+| node-xml            | 4,335   | ☐      | ✘             | ✘      |
+| libxmljs            | 8,927   | ✘      | ✘             | ☐      |
+| node-expat          | 13,028  | ✘      | ✘             | ✘      |
+| sax                 | 14,277  | ☐      | ✘             | ✘      |
+| @tuananh/sax-parser | 45,779  | ✘      | ✘             | ☐      |
+| ltx                 | 81,722  | ☐      | ☐             | ✘      |
+
+ops/sec: higher is better.
 
 ## Usage
 
