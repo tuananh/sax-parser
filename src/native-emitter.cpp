@@ -36,8 +36,9 @@ public:
     _env = info->Env();
     _emit = info->This().As<Napi::Object>().Get("emit").As<Napi::Function>();
   }
-  
-  ~MySAXDelegator() {
+
+  ~MySAXDelegator()
+  {
     _cbInfo = nullptr;
     _env = nullptr;
   }
@@ -45,7 +46,8 @@ public:
   void startElement(void *ctx, const char *name, const char **atts)
   {
     Napi::Object attribs = Napi::Object::New(_env);
-    while (*atts != nullptr) {
+    while (*atts != nullptr)
+    {
       const char *name = *atts++;
       const char *val = *atts++;
       attribs.Set(name, val);
@@ -109,7 +111,8 @@ private:
   {
     _emit.Call(_cbInfo->This(), {Napi::String::New(_env, eventName), obj});
   }
-  void emitEvent(std::string eventName, std::string name, Napi::Object obj) {
+  void emitEvent(std::string eventName, std::string name, Napi::Object obj)
+  {
     _emit.Call(_cbInfo->This(), {Napi::String::New(_env, eventName), Napi::String::New(_env, name), obj});
   }
 };
@@ -120,18 +123,27 @@ void SaxParser::Parse(const Napi::CallbackInfo &info)
   {
     throw Napi::Error::New(info.Env(), "Expecting 1 argument.");
   }
-  if (!info[0].IsString())
+  if (!info[0].IsString() && !info[0].IsBuffer())
   {
-    throw Napi::Error::New(info.Env(), "The parameter must be a string.");
+    throw Napi::Error::New(info.Env(), "The parameter must be a string or buffer.");
   }
 
-  std::string input = info[0].As<Napi::String>().Utf8Value();
-  const char *xml = input.c_str();
   SAXParser *parser = new SAXParser();
   MySAXDelegator *delegator = new MySAXDelegator(&info);
 
   parser->init("UTF-8");
   parser->setDelegator(delegator);
 
-  parser->parse(xml, std::strlen(xml));
+  if (info[0].IsString())
+  {
+    std::string input = info[0].As<Napi::String>().Utf8Value();
+    const char *xml = input.c_str();
+
+    parser->parse(xml, std::strlen(xml));
+  }
+  else if (info[0].IsBuffer())
+  {
+    Napi::Buffer<char> buffer = info[0].As<Napi::Buffer<char>>();
+    parser->parse(buffer.Data(), buffer.Length());
+  }
 }

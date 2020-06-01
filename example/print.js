@@ -1,5 +1,5 @@
 const { readFileSync } = require('fs')
-const SaxParser = require('.')
+const SaxParser = require('..')
 
 const parser = new SaxParser()
 
