@@ -39,7 +39,12 @@ public:
 
   void startElement(void *ctx, const char *name, const char **atts)
   {
-    this->emitEvent("startElement", std::string(name));
+    Napi::Object attribs = Napi::Object::New(_env);
+    while (*atts != nullptr) {
+      attribs.Set(*atts++, *atts++);
+    }
+
+    this->emitEvent("startElement", std::string(name), attribs);
   }
   void endElement(void *ctx, const char *name, size_t len)
   {
@@ -51,7 +56,9 @@ public:
   }
   void startAttribute(void *ctx, const char *name, size_t nameLen, const char *value, size_t valueLen)
   {
-    this->emitEvent("startAttribute", std::string(name, nameLen), std::string(value, valueLen));
+    Napi::Object attrib = Napi::Object::New(_env);
+    attrib.Set(std::string(name, nameLen), std::string(value, valueLen));
+    this->emitEvent("startAttribute", attrib);
   }
   void endAttribute(void *ctx)
   {
@@ -85,16 +92,18 @@ private:
 
   void emitEvent(std::string eventName)
   {
-    _emit.Call(this->_cbInfo->This(), {Napi::String::New(this->_env, eventName)});
+    _emit.Call(_cbInfo->This(), {Napi::String::New(_env, eventName)});
   }
   void emitEvent(std::string eventName, std::string data)
   {
-    _emit.Call(this->_cbInfo->This(), {Napi::String::New(this->_env, eventName), Napi::String::New(this->_env, data)});
+    _emit.Call(_cbInfo->This(), {Napi::String::New(_env, eventName), Napi::String::New(_env, data)});
   }
-  // TODO(anh): fix this
-  void emitEvent(std::string eventName, std::string name, std::string value)
+  void emitEvent(std::string eventName, Napi::Object obj)
   {
-    _emit.Call(this->_cbInfo->This(), {Napi::String::New(this->_env, eventName), Napi::String::New(this->_env, name), Napi::String::New(this->_env, value)});
+    _emit.Call(_cbInfo->This(), {Napi::String::New(_env, eventName), obj});
+  }
+  void emitEvent(std::string eventName, std::string name, Napi::Object obj) {
+    _emit.Call(_cbInfo->This(), {Napi::String::New(_env, eventName), Napi::String::New(_env, name), obj});
   }
 };
 

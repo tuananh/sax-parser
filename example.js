@@ -4,7 +4,7 @@ const SaxParser = require('.')
 const parser = new SaxParser()
 
 let depth = 0
-parser.on('startElement', (name) => {
+parser.on('startElement', (name, attribs) => {        
     let str = ''
     for (let i = 0; i < depth; ++i) str += '  ' // indentation
     str += `<${name}>`
