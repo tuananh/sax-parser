@@ -37,43 +37,43 @@ public:
     _emit = info->This().As<Napi::Object>().Get("emit").As<Napi::Function>();
   }
 
-  virtual void startElement(void *ctx, const char *name, const char **atts)
+  void startElement(void *ctx, const char *name, const char **atts)
   {
     this->emitEvent("startElement", std::string(name));
   }
-  virtual void endElement(void *ctx, const char *name, size_t len)
+  void endElement(void *ctx, const char *name, size_t len)
   {
     this->emitEvent("endElement", std::string(name, len));
   }
-  virtual void textHandler(void *ctx, const char *s, size_t len)
+  void textHandler(void *ctx, const char *s, size_t len)
   {
     this->emitEvent("text", std::string(s, len));
   }
-  virtual void startAttribute(void *ctx, const char *name, size_t nameLen, const char *value, size_t valueLen)
+  void startAttribute(void *ctx, const char *name, size_t nameLen, const char *value, size_t valueLen)
   {
     this->emitEvent("startAttribute", std::string(name, nameLen), std::string(value, valueLen));
   }
-  virtual void endAttribute(void *ctx)
+  void endAttribute(void *ctx)
   {
     this->emitEvent("endAttribute");
   }
-  virtual void cdataHandler(void *ctx, const char *s, size_t len)
+  void cdataHandler(void *ctx, const char *s, size_t len)
   {
     this->emitEvent("cdata", std::string(s, len));
   }
-  virtual void commentHandler(void *ctx, const char *s, size_t len)
+  void commentHandler(void *ctx, const char *s, size_t len)
   {
     this->emitEvent("comment", std::string(s, len));
   }
-  virtual void startDocument(void *ctx)
+  void startDocument(void *ctx)
   {
     this->emitEvent("startDocument");
   }
-  virtual void endDocument(void *ctx)
+  void endDocument(void *ctx)
   {
     this->emitEvent("endDocument");
   }
-  virtual void doctypeHandler(void *ctx, const char *doctype, size_t len)
+  void doctypeHandler(void *ctx, const char *doctype, size_t len)
   {
     this->emitEvent("doctype", std::string(doctype, len));
   }
