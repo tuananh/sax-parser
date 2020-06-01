@@ -16,7 +16,7 @@
         '-fexceptions',
         '-Wall',
         '-mtune=native',
-        '-03',
+        '-O3',
         '-flto'
       ],
       'conditions': [
