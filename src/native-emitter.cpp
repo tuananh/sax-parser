@@ -125,7 +125,8 @@ void SaxParser::Parse(const Napi::CallbackInfo &info)
     throw Napi::Error::New(info.Env(), "The parameter must be a string.");
   }
 
-  const char *xml = info[0].As<Napi::String>().Utf8Value().c_str();
+  std::string input = info[0].As<Napi::String>().Utf8Value();
+  const char *xml = input.c_str();
   SAXParser *parser = new SAXParser();
   MySAXDelegator *delegator = new MySAXDelegator(&info);
 
