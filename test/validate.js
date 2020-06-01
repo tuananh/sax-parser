@@ -24,7 +24,7 @@ test('parse() argument not string => should throw', (t) => {
         'argument not string => should throw'
     )
 
-    t.is(error.message, 'The parameter must be a string.')
+    t.is(error.message, 'The parameter must be a string or buffer.')
 })
 
 test('parse() valid argument => should not throw', (t) => {
