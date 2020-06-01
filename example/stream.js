@@ -2,9 +2,9 @@
 
 const fs = require('fs')
 const path = require('path')
-const SaxParser = require('./example.')
+const SaxParser = require('..')
 
-const FILE_TO_READ = 'benchmark/test.xml'
+const FILE_TO_READ = '/../benchmark/test.xml'
 const parser = new SaxParser()
 
 parser.on('startElement', (name, attrs) => {
