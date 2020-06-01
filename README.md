@@ -1,10 +1,8 @@
 sax-parser
-![npm version](https://badgen.net/npm/v/@tuananh/sax-parser)
+[![npm version](https://badgen.net/npm/v/@tuananh/sax-parser)](https://npmjs.com/package/@tuananh/sax-parser)
 ![github actions ci](https://github.com/tuananh/sax-parser/workflows/CI/badge.svg)
 ![license](https://badgen.net/npm/license/@tuananh/sax-parser)
 ==========
-
-
 
 🚨 ALPHA STATE: This is a very much work-in-progress now.
 

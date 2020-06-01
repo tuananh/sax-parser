@@ -4,15 +4,18 @@ const SaxParser = require('.')
 const parser = new SaxParser()
 
 const isEmptyObject = (obj) => Object.keys(obj).length === 0 && obj.constructor === Object
+const indent = (depth) => {
+    for (let i = 0; i < depth; ++i) process.stdout.write('  ')
+}
 
 let depth = 0
-parser.on('startElement', (name, attribs) => {        
-    for (let i = 0; i < depth; ++i) process.stdout.write('  ') // indentation    
+parser.on('startElement', (name, attrs) => {        
+    indent(depth)
     process.stdout.write(`<${name}`)
-    if (!isEmptyObject(attribs)) {
+    if (!isEmptyObject(attrs)) {
         process.stdout.write(' ')
-        for (const key in attribs) {
-            process.stdout.write(`${key}="${attribs[key]}"`)
+        for (const key in attrs) {
+            process.stdout.write(`${key}="${attrs[key]}" `)
         }
     }
     process.stdout.write('>\n')
@@ -20,13 +23,13 @@ parser.on('startElement', (name, attribs) => {
 })
 
 parser.on('text', (text) => {
-    for (let i = 0; i < depth + 1; ++i) process.stdout.write('  ') // indentation    
+    indent(depth+1)
     process.stdout.write(text + '\n')
 })
 
 parser.on('endElement', (name) => {
     depth--
-    for (let i = 0; i < depth; ++i) process.stdout.write('  ') // indentation    
+    indent(depth)
     process.stdout.write(`<${name}>\n`)
 })
 
@@ -39,7 +42,7 @@ parser.on('endAttribute', () => {
 })
 
 parser.on('cdata', (cdata) => {
-    for (let i = 0; i < depth + 1; ++i) process.stdout.write('  ') // indentation    
+    indent(depth+1)
     process.stdout.write(`<![CDATA[${cdata}]]>\n`)
 })
 
