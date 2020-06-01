@@ -1,7 +1,7 @@
 const test = require('ava')
 const SaxParser = require('..')
 
-test('cdata test', (t) => {
+test(`.on('cdata') event test`, (t) => {
     const xml = `<xml><![CDATA[They're saying "x < y" & that "z > y" so I guess that means that z > x]]></xml>`
     const parser = new SaxParser()
 

@@ -1,7 +1,7 @@
 const test = require('ava')
 const SaxParser = require('..')
 
-test('no argument => should throw', (t) => {
+test('parse() no argument => should throw', (t) => {
     const error = t.throws(
         () => {
             const parser = new SaxParser()
@@ -14,7 +14,7 @@ test('no argument => should throw', (t) => {
     t.is(error.message, 'Expecting 1 argument.')
 })
 
-test('argument not string => should throw', (t) => {
+test('parse() argument not string => should throw', (t) => {
     const error = t.throws(
         () => {
             const parser = new SaxParser()
@@ -27,7 +27,7 @@ test('argument not string => should throw', (t) => {
     t.is(error.message, 'The parameter must be a string.')
 })
 
-test('valid argument test', (t) => {
+test('parse() valid argument => should not throw', (t) => {
     const xml = '<xml><hello attr="testattr">world</hello></xml>'
     const parser = new SaxParser()
     parser.parse(xml)

@@ -1,7 +1,7 @@
 const test = require('ava')
 const SaxParser = require('..')
 
-test(`.on('startElement') test`, (t) => {
+test(`.on('startElement') event test`, (t) => {
     const xml = '<hello>world</hello>'
     const parser = new SaxParser()
 

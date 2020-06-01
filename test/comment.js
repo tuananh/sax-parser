@@ -1,7 +1,7 @@
 const test = require('ava')
 const SaxParser = require('..')
 
-test('comment test', (t) => {
+test(`.on('comment') event test`, (t) => {
     const xml = `
     <xml>
     <!--This is example of comment in XML1-->

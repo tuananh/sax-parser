@@ -1,7 +1,7 @@
 const test = require('ava')
 const SaxParser = require('..')
 
-test('doctype test', (t) => {
+test(`.on('doctype') event test`, (t) => {
     const xml = '<xml><!DOCTYPE note SYSTEM "Note.dtd"><hello>world</world></xml>'
     const parser = new SaxParser()
 
