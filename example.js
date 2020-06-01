@@ -3,32 +3,35 @@ const SaxParser = require('.')
 
 const parser = new SaxParser()
 
+const isEmptyObject = (obj) => Object.keys(obj).length === 0 && obj.constructor === Object
+
 let depth = 0
 parser.on('startElement', (name, attribs) => {        
-    let str = ''
-    for (let i = 0; i < depth; ++i) str += '  ' // indentation
-    str += `<${name}>`
-    process.stdout.write(str + '\n')
+    for (let i = 0; i < depth; ++i) process.stdout.write('  ') // indentation    
+    process.stdout.write(`<${name}`)
+    if (!isEmptyObject(attribs)) {
+        process.stdout.write(' ')
+        for (const key in attribs) {
+            process.stdout.write(`${key}="${attribs[key]}"`)
+        }
+    }
+    process.stdout.write('>\n')
     depth++
 })
 
 parser.on('text', (text) => {
-    let str = ''
-    for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
-    str += text
-    process.stdout.write(str + '\n')
+    for (let i = 0; i < depth + 1; ++i) process.stdout.write('  ') // indentation    
+    process.stdout.write(text + '\n')
 })
 
 parser.on('endElement', (name) => {
     depth--
-    let str = ''
-    for (let i = 0; i < depth; ++i) str += '  ' // indentation
-    str += `<${name}>`
-    process.stdout.write(str + '\n')
+    for (let i = 0; i < depth; ++i) process.stdout.write('  ') // indentation    
+    process.stdout.write(`<${name}>\n`)
 })
 
-parser.on('startAttribute', (name, value) => {
-    // console.log('startAttribute', name, value)
+parser.on('startAttribute', (attr) => {
+    // console.log('startAttribute', attr)
 })
 
 parser.on('endAttribute', () => {
@@ -36,11 +39,8 @@ parser.on('endAttribute', () => {
 })
 
 parser.on('cdata', (cdata) => {
-    let str = ''
-    for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
-    str += `<![CDATA[${cdata}]]>`
-    process.stdout.write(str)
-    process.stdout.write('\n')
+    for (let i = 0; i < depth + 1; ++i) process.stdout.write('  ') // indentation    
+    process.stdout.write(`<![CDATA[${cdata}]]>\n`)
 })
 
 parser.on('comment', (comment) => {
