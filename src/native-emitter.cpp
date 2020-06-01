@@ -46,7 +46,9 @@ public:
   {
     Napi::Object attribs = Napi::Object::New(_env);
     while (*atts != nullptr) {
-      attribs.Set(*atts++, *atts++);
+      const char *name = *atts++;
+      const char *val = *atts++;
+      attribs.Set(name, val);
     }
 
     this->emitEvent("startElement", std::string(name), attribs);
