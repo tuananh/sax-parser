@@ -1,7 +1,7 @@
 sax-parser
 [![npm version](https://badgen.net/npm/v/@tuananh/sax-parser)](https://npmjs.com/package/@tuananh/sax-parser)
-![github actions ci](https://github.com/tuananh/sax-parser/workflows/CI/badge.svg)
-![travis ci](https://api.travis-ci.org/tuananh/sax-parser.svg?branch=develop)
+[![github actions ci](https://github.com/tuananh/sax-parser/workflows/CI/badge.svg)](https://github.com/tuananh/sax-parser/actions)
+[![travis ci](https://api.travis-ci.org/tuananh/sax-parser.svg?branch=develop)](https://travis-ci.org/github/tuananh/sax-parser)
 ![license](https://badgen.net/npm/license/@tuananh/sax-parser)
 ==========
 
@@ -42,7 +42,7 @@ Fastest is ltx
 | libxmljs            | 8,927   | ✘      | ✘             | ☐      |
 | node-expat          | 13,028  | ✘      | ✘             | ✘      |
 | sax                 | 14,277  | ☐      | ✘             | ✘      |
-| @tuananh/sax-parser | 45,779  | ✘      | ✘             | ☐      |
+| @tuananh/sax-parser | 45,779  | ✘      | ✘             | ✘      |
 | ltx                 | 81,722  | ☐      | ☐             | ✘      |
 
 ops/sec: higher is better.
