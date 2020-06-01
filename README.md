@@ -49,7 +49,7 @@ ops/sec: higher is better.
 
 ## Usage
 
-See [`example.js`](example.js) for an example how to use `@tuananh/sax-parser` to pretty print XML to `process.stdout`
+See [`example/print.js`](example/print.js) for an example how to use `@tuananh/sax-parser` to pretty print XML to `process.stdout`
 
 ```js
 const { readFileSync } = require('fs')
@@ -210,7 +210,7 @@ cd sax-parser
 git submodule init
 npm install
 npm run build
-node example.js
+node example/print.js
 npm run test
 ```
 
