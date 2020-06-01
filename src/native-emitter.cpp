@@ -36,6 +36,11 @@ public:
     _env = info->Env();
     _emit = info->This().As<Napi::Object>().Get("emit").As<Napi::Function>();
   }
+  
+  ~MySAXDelegator() {
+    _cbInfo = nullptr;
+    _env = nullptr;
+  }
 
   void startElement(void *ctx, const char *name, const char **atts)
   {
