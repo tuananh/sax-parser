@@ -11,6 +11,14 @@
       'cflags_cc!': [ '-fno-exceptions' ],
       'include_dirs': ["<!@(node -p \"require('node-addon-api').include\")"],
       'dependencies': ["<!(node -p \"require('node-addon-api').gyp\")"],
+      'cflags_cc': [
+        '-std=c++11',
+        '-fexceptions',
+        '-Wall',
+        '-mtune=native',
+        '-03',
+        '-flto'
+      ],
       'conditions': [
         ['OS=="win"', {
           "msvs_settings": {
