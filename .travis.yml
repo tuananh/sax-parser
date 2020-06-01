@@ -8,8 +8,6 @@ node_js:
   - '12'
   - '13'
   - '14'
-env:
-  - CXX=g++-4.9
 addons:
   apt:
     sources:
@@ -22,7 +20,6 @@ cache:
     - $HOME/.npm
 before_install:
   - if [[ $TRAVIS_OS_NAME == "osx" ]]; then export CXX=clang++; fi
-  - $CXX --version
   - echo $TRAVIS_BRANCH
   - echo `git describe --tags --always HEAD`
   - npm config set progress false
