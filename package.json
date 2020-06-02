@@ -54,7 +54,7 @@
     },
     "lint-staged": {
         "*.js": [
-            "npx prettier --write .",
+            "npx prettier --write src/**/*.js",
             "git add ."
         ]
     }
