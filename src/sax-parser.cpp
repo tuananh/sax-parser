@@ -42,6 +42,8 @@ namespace saxparser
                     const char **attrs = &attr;
                     SAXParser::startElement(_saxParserImpl, (const XML_CHAR *)_curEleName.c_str(), (const XML_CHAR **)attrs);
                 }
+
+                SAXParser::endAttribute(_saxParserImpl);
             };
             _sax3Handler.xml_end_element_cb = [=](const char *name, size_t len) {
                 SAXParser::endElement(_saxParserImpl, (const XML_CHAR *)name, len);

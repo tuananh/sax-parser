@@ -5,13 +5,23 @@ test(`.on('startAttribute') event test`, (t) => {
     const xml = '<xml><hello attr1="val1" attr2="val2">world</hello></xml>'
     const parser = new SaxParser()
 
-    let attribs = []
+    let attrs = []
+    let endAttrCount = 0
     parser.on('startAttribute', (attr) => {
-        attribs.push(attr)
+        attrs.push(attr)
+    })
+
+    parser.on('endAttribute', () => {
+        endAttrCount++
     })
 
     parser.on('endDocument', () => {
-        t.deepEqual(attribs, [{ attr1: 'val1' }, { attr2: 'val2' }])
+        t.deepEqual(attrs, [{ attr1: 'val1' }, { attr2: 'val2' }])
+        t.is(
+            attrs.length,
+            endAttrCount,
+            'startAttribute counts equal to endAttribute'
+        )
         t.pass()
     })
 
