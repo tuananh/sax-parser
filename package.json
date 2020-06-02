@@ -16,6 +16,14 @@
         "index.js",
         "binding.gyp"
     ],
+    "keywords": [
+        "xml",
+        "sax",
+        "pugixml",
+        "rapidxml",
+        "parse",
+        "parsing"
+    ],
     "author": "Tuan Anh Tran <me@tuananh.org>",
     "license": "MIT",
     "dependencies": {
