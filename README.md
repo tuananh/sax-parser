@@ -37,7 +37,7 @@ Fastest is ltx
 ```
 
 | module              | ops/sec | native | XML compliant | stream |
-|---------------------|---------|--------|---------------|--------|
+| ------------------- | ------- | ------ | ------------- | ------ |
 | node-xml            | 4,335   | ☐      | ✘             | ✘      |
 | libxmljs            | 8,927   | ✘      | ✘             | ☐      |
 | node-expat          | 13,028  | ✘      | ✘             | ✘      |
@@ -216,7 +216,7 @@ npm run test
 
 ## Credits
 
-- [engine-x](https://github.com/simdsoft/engine-x): a fork of cocos2d-x game engine
-- [xsxml](https://github.com/simdsoft/xsxml): The embedded xml SAX parser, extract from pugixml/rapidxml DOM parsers
-- [addon-event-emitter](https://github.com/NickNaso/addon-event-emitter): How to create and use event emitter interface on Node.js add-ons
-- [addon-stream](https://github.com/NickNaso/addon-stream): How to use and create stream on Node.js native add-ons
+-   [engine-x](https://github.com/simdsoft/engine-x): a fork of cocos2d-x game engine
+-   [xsxml](https://github.com/simdsoft/xsxml): The embedded xml SAX parser, extract from pugixml/rapidxml DOM parsers
+-   [addon-event-emitter](https://github.com/NickNaso/addon-event-emitter): How to create and use event emitter interface on Node.js add-ons
+-   [addon-stream](https://github.com/NickNaso/addon-stream): How to use and create stream on Node.js native add-ons

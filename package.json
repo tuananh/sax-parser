@@ -1,61 +1,61 @@
 {
-  "name": "@tuananh/sax-parser",
-  "version": "0.0.2",
-  "description": "A very fast SAX parser for Node.js, written in C++.",
-  "main": "index.js",
-  "scripts": {
-    "test": "ava",
-    "build": "node-gyp rebuild",
-    "install": "node-gyp rebuild",
-    "benchmark": "node benchmark",
-    "fmt": "prettier --write **/*.js"
-  },
-  "files": [
-    "src/**",
-    "vendor/**",
-    "index.js",
-    "binding.gyp"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "bindings": "^1.5.0",
-    "node-addon-api": "^3.0.0"
-  },
-  "devDependencies": {
-    "ava": "^3.8.2",
-    "benchmark": "^2.1.4",
-    "husky": "^4.2.5",
-    "libxmljs": "^0.19.7",
-    "lint-staged": "^10.2.7",
-    "ltx": "^2.9.2",
-    "node-expat": "^2.3.18",
-    "node-gyp": "^5.1.1",
-    "node-xml": "^1.0.2",
-    "prettier": "^2.0.5",
-    "sax": "^1.2.4"
-  },
-  "gypfile": true,
-  "directories": {
-    "test": "test"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/tuananh/sax-parser.git"
-  },
-  "bugs": {
-    "url": "https://github.com/tuananh/sax-parser/issues"
-  },
-  "homepage": "https://github.com/tuananh/sax-parser#readme",
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
+    "name": "@tuananh/sax-parser",
+    "version": "0.0.2",
+    "description": "A very fast SAX parser for Node.js, written in C++.",
+    "main": "index.js",
+    "scripts": {
+        "test": "ava",
+        "build": "node-gyp rebuild",
+        "install": "node-gyp rebuild",
+        "benchmark": "node benchmark",
+        "fmt": "prettier --write **/*.js"
+    },
+    "files": [
+        "src/**",
+        "vendor/**",
+        "index.js",
+        "binding.gyp"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "bindings": "^1.5.0",
+        "node-addon-api": "^3.0.0"
+    },
+    "devDependencies": {
+        "ava": "^3.8.2",
+        "benchmark": "^2.1.4",
+        "husky": "^4.2.5",
+        "libxmljs": "^0.19.7",
+        "lint-staged": "^10.2.7",
+        "ltx": "^2.9.2",
+        "node-expat": "^2.3.18",
+        "node-gyp": "^5.1.1",
+        "node-xml": "^1.0.2",
+        "prettier": "^2.0.5",
+        "sax": "^1.2.4"
+    },
+    "gypfile": true,
+    "directories": {
+        "test": "test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/tuananh/sax-parser.git"
+    },
+    "bugs": {
+        "url": "https://github.com/tuananh/sax-parser/issues"
+    },
+    "homepage": "https://github.com/tuananh/sax-parser#readme",
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged"
+        }
+    },
+    "lint-staged": {
+        "*.js": [
+            "npx prettier --write .",
+            "git add ."
+        ]
     }
-  },
-  "lint-staged": {
-    "*.js": [
-      "npx prettier --write .",
-      "git add"
-    ]
-  }
 }

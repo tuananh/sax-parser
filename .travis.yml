@@ -1,28 +1,28 @@
 notifications:
-  email: false
+    email: false
 language: node_js
 os:
-  - linux
-  - osx
+    - linux
+    - osx
 node_js:
-  - '12'
-  - '13'
-  - '14'
+    - '12'
+    - '13'
+    - '14'
 addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - gcc-6
-      - g++-6
+    apt:
+        sources:
+            - ubuntu-toolchain-r-test
+        packages:
+            - gcc-6
+            - g++-6
 cache:
-  directories:
-    - $HOME/.npm
+    directories:
+        - $HOME/.npm
 before_install:
-  - if [[ $TRAVIS_OS_NAME == "osx" ]]; then export CXX=clang++; fi
-  - echo $TRAVIS_BRANCH
-  - echo `git describe --tags --always HEAD`
-  - npm config set progress false
-  - npm config set spin false
+    - if [[ $TRAVIS_OS_NAME == "osx" ]]; then export CXX=clang++; fi
+    - echo $TRAVIS_BRANCH
+    - echo `git describe --tags --always HEAD`
+    - npm config set progress false
+    - npm config set spin false
 script:
-  - npm test
+    - npm test
