@@ -16,4 +16,4 @@ Inspired by `node-expat`. Will implement the missing ones.
 * `#on('xmlDecl', function (version, encoding, standalone) {})` **to be implemented**
 * `#on('cdata', function (cdata) {})`
 * `#on('entityDecl', function (entityName, isParameterEntity, value, base, systemId, publicId, notationName) {})` **to be implemented**
-* `#on('error', function (e) {})` **to be implemented**
+* `#on('error', function ({code, offset}) {})`
