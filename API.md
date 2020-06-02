@@ -3,6 +3,9 @@ API
 
 Inspired by `node-expat`. Will implement the missing ones.
 
+* `#parse(xml)` string or buffer
+* `#on('startDocument', function () {})`
+* `#on('endDocument', function () {})`
 * `#on('startElement' function (name, attrs) {})`
 * `#on('endElement' function (name) {})`
 * `#on('startAttribute' function (attr) {})`

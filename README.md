@@ -49,7 +49,9 @@ ops/sec: higher is better.
 
 ## Usage
 
-See [`example/print.js`](example/print.js) for an example how to use `@tuananh/sax-parser` to pretty print XML to `process.stdout`
+See [`example/print.js`](example/print.js) for an example how to use `@tuananh/sax-parser` to pretty print XML to `process.stdout`.
+
+For complete API documentation, see [API.md](API.md).
 
 ```js
 const { readFileSync } = require('fs')
