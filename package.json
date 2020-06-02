@@ -6,7 +6,7 @@
     "scripts": {
         "test": "ava",
         "build": "node-gyp rebuild",
-        "install": "node-gyp rebuild",
+        "install": "node-gyp-build",
         "benchmark": "node benchmark",
         "fmt": "prettier --write **/*.js"
     },
@@ -31,8 +31,9 @@
     },
     "license": "MIT",
     "dependencies": {
-        "bindings": "^1.5.0",
-        "node-addon-api": "^3.0.0"
+        "node-addon-api": "^3.0.0",
+        "node-gyp-build": "^4.2.2",
+        "prebuildify": "^4.0.0"
     },
     "devDependencies": {
         "ava": "^3.8.2",
