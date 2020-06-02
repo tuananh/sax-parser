@@ -3,13 +3,14 @@ const SaxParser = require('..')
 
 const parser = new SaxParser()
 
-const isEmptyObject = (obj) => Object.keys(obj).length === 0 && obj.constructor === Object
+const isEmptyObject = (obj) =>
+    Object.keys(obj).length === 0 && obj.constructor === Object
 const indent = (depth) => {
     for (let i = 0; i < depth; ++i) process.stdout.write('  ')
 }
 
 let depth = 0
-parser.on('startElement', (name, attrs) => {        
+parser.on('startElement', (name, attrs) => {
     indent(depth)
     process.stdout.write(`<${name}`)
     if (!isEmptyObject(attrs)) {
@@ -23,7 +24,7 @@ parser.on('startElement', (name, attrs) => {
 })
 
 parser.on('text', (text) => {
-    indent(depth+1)
+    indent(depth + 1)
     process.stdout.write(text + '\n')
 })
 
@@ -42,7 +43,7 @@ parser.on('endAttribute', () => {
 })
 
 parser.on('cdata', (cdata) => {
-    indent(depth+1)
+    indent(depth + 1)
     process.stdout.write(`<![CDATA[${cdata}]]>\n`)
 })
 

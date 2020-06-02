@@ -27,9 +27,16 @@ test('parse() argument not string => should throw', (t) => {
     t.is(error.message, 'The parameter must be a string or buffer.')
 })
 
-test('parse() valid argument => should not throw', (t) => {
+test('parse() with valid string => should not throw', (t) => {
     const xml = '<xml><hello attr="testattr">world</hello></xml>'
     const parser = new SaxParser()
     parser.parse(xml)
+    t.pass()
+})
+
+test('parse() with valid buffer => should not throw', (t) => {
+    const xml = '<xml><hello attr="testattr">world</hello></xml>'
+    const parser = new SaxParser()
+    parser.parse(Buffer.from(xml))
     t.pass()
 })

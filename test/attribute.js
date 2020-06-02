@@ -11,7 +11,7 @@ test(`.on('startAttribute') event test`, (t) => {
     })
 
     parser.on('endDocument', () => {
-        t.deepEqual(attribs, [{attr1: 'val1'}, {attr2: 'val2'}])
+        t.deepEqual(attribs, [{ attr1: 'val1' }, { attr2: 'val2' }])
         t.pass()
     })
 

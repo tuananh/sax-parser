@@ -15,7 +15,10 @@ test(`.on('comment') event test`, (t) => {
     })
 
     parser.on('endDocument', () => {
-        t.deepEqual(comments, ['This is example of comment in XML1', 'This is example of comment in XML2'])
+        t.deepEqual(comments, [
+            'This is example of comment in XML1',
+            'This is example of comment in XML2',
+        ])
         t.pass()
     })
 

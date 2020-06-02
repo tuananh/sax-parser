@@ -7,7 +7,8 @@
     "test": "ava",
     "build": "node-gyp rebuild",
     "install": "node-gyp rebuild",
-    "benchmark": "node benchmark"
+    "benchmark": "node benchmark",
+    "fmt": "prettier --write **/*.js"
   },
   "files": [
     "src/**",
@@ -24,11 +25,14 @@
   "devDependencies": {
     "ava": "^3.8.2",
     "benchmark": "^2.1.4",
+    "husky": "^4.2.5",
     "libxmljs": "^0.19.7",
+    "lint-staged": "^10.2.7",
     "ltx": "^2.9.2",
     "node-expat": "^2.3.18",
     "node-gyp": "^5.1.1",
     "node-xml": "^1.0.2",
+    "prettier": "^2.0.5",
     "sax": "^1.2.4"
   },
   "gypfile": true,
@@ -42,5 +46,16 @@
   "bugs": {
     "url": "https://github.com/tuananh/sax-parser/issues"
   },
-  "homepage": "https://github.com/tuananh/sax-parser#readme"
+  "homepage": "https://github.com/tuananh/sax-parser#readme",
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": [
+      "npx prettier --write .",
+      "git add"
+    ]
+  }
 }

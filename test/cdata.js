@@ -11,7 +11,9 @@ test(`.on('cdata') event test`, (t) => {
     })
 
     parser.on('endDocument', () => {
-        t.deepEqual(cdatas, [`They're saying "x < y" & that "z > y" so I guess that means that z > x`])
+        t.deepEqual(cdatas, [
+            `They're saying "x < y" & that "z > y" so I guess that means that z > x`,
+        ])
         t.pass()
     })
 
