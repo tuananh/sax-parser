@@ -16,7 +16,7 @@
         "index.js",
         "binding.gyp"
     ],
-    "author": "",
+    "author": "Tuan Anh Tran <me@tuananh.org>",
     "license": "MIT",
     "dependencies": {
         "bindings": "^1.5.0",
@@ -54,7 +54,7 @@
     },
     "lint-staged": {
         "*.js": [
-            "npx prettier --write src/**/*.js",
+            "npm run fmt",
             "git add ."
         ]
     }
