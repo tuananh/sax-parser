@@ -34,39 +34,39 @@ inline std::string ParseStatusToString(xsxml::xml_parse_status s)
     switch (s)
     {
     case xsxml::xml_parse_status::status_io_error:
-        return "IO_ERR";
+        return "ERR_IO";
     case xsxml::xml_parse_status::status_out_of_memory:
-        return "OUT_OF_MEMORY_ERR";
+        return "ERR_OUT_OF_MEMORY";
     case xsxml::xml_parse_status::status_internal_error:
-        return "INTERAL_ERROR";
+        return "ERR_INTERAL";
     case xsxml::xml_parse_status::status_unrecognized_tag:
-        return "UNRECOGNIZE_TAG_ERR";
+        return "ERR_UNRECOGNIZE_TAG";
     case xsxml::xml_parse_status::status_bad_pi:
-        return "BAD_PI_ERR";
+        return "ERR_BAD_PI";
     case xsxml::xml_parse_status::status_bad_comment:
-        return "BAD_COMMENT_ERR";
+        return "ERR_BAD_COMMENT";
     case xsxml::xml_parse_status::status_bad_cdata:
-        return "BAD_CDATA_ERR";
+        return "ERR_BAD_CDATA";
     case xsxml::xml_parse_status::status_bad_doctype:
-        return "BAD_DOCTYPE_ERR";
+        return "ERR_BAD_DOCTYPE";
     case xsxml::xml_parse_status::status_bad_pcdata:
-        return "BAD_PCDATA_ERR";
+        return "ERR_BAD_PCDATA";
     case xsxml::xml_parse_status::status_bad_start_element:
-        return "BAD_START_ELEMENT_ERR";
+        return "ERR_BAD_START_ELEMENT";
     case xsxml::xml_parse_status::status_bad_attribute:
-        return "BAD_ATTRIBUTE_ERR";
+        return "ERR_BAD_ATTRIBUTE";
     case xsxml::xml_parse_status::status_bad_end_element:
-        return "BAD_END_ELEMENT_ERR";
+        return "ERR_BAD_END_ELEMENT";
     case xsxml::xml_parse_status::status_end_element_mismatch:
-        return "END_ELEMENT_MISMATCH_ERR";
+        return "ERR_END_ELEMENT_MISMATCH";
     case xsxml::xml_parse_status::status_append_invalid_root:
-        return "APPEND_INVALID_ROOT_ERR";
+        return "ERR_APPEND_INVALID_ROOT";
     case xsxml::xml_parse_status::status_no_document_element:
-        return "NO_DOCUMENT_ELEMENT_ERR";
+        return "ERR_NO_DOCUMENT_ELEMENT";
     case xsxml::xml_parse_status::status_ok:
         return "OK"; // should not get here
     default:
-        return "UNKNOWN_ERR";
+        return "ERR_UNKNOWN";
     }
 }
 class MySAXDelegator : public SAXDelegator
