@@ -31,7 +31,7 @@ parser.on('text', (text) => {
 parser.on('endElement', (name) => {
     depth--
     indent(depth)
-    process.stdout.write(`<${name}>\n`)
+    process.stdout.write(`</${name}>\n`)
 })
 
 parser.on('startAttribute', (attr) => {
@@ -63,5 +63,9 @@ parser.on('endDocument', () => {
     process.stdout.write(`<!--=== END ===-->`)
 })
 
-const xml = readFileSync(__dirname + '/benchmark/test.xml', 'utf-8')
+parser.on('error', ({ code, offset }) => {
+    console.error('parse error: code=%s | offset=[%s]', code, offset)
+})
+
+const xml = readFileSync(__dirname + '/../benchmark/test.xml', 'utf-8')
 parser.parse(xml)
