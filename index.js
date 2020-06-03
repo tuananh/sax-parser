@@ -2,7 +2,7 @@
 
 const EventEmitter = require('events').EventEmitter
 const Stream = require('stream').Stream
-const SaxParser = require('bindings')('sax_parser').SaxParser
+const SaxParser = require('node-gyp-build')(__dirname).SaxParser
 const inherits = require('util').inherits
 
 inherits(SaxParser, EventEmitter)
