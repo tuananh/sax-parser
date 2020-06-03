@@ -67,8 +67,20 @@ parser.on('error', ({ code, offset }) => {
     console.error('parse error: code=%s | offset=[%s]', code, offset)
 })
 
+parser.on('startXmlDeclAttr', (declAttr) => {
+    // console.log('startXmlDeclAttr', declAttr)
+})
+
+parser.on('endXmlDeclAttr', () => {
+    // console.log('endXmlDeclAttr')
+})
+
 parser.on('xmlDecl', (decl) => {
-    process.stdout.write(`<?${JSON.stringify(decl)}?>\n`)
+    process.stdout.write('<? ')
+    for (const key in decl) {
+        process.stdout.write(`${key}="${decl[key]}" `)    
+    }
+    process.stdout.write('?>\n')
 })
 
 const xml = readFileSync(__dirname + '/../benchmark/test.xml', 'utf-8')

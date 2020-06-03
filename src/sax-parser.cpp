@@ -18,6 +18,7 @@ public:
     SAX2Hander() : _saxParserImpl(0)
     {
         _curEleAttrs.reserve(64);
+        _xmlDeclAttrs.reserve(8);
 
         _sax3Handler.xml_start_element_cb = [=](char *name, size_t size) {
             _curEleName = xsxml::string_view(name, size);
@@ -76,8 +77,26 @@ public:
         _sax3Handler.xml_error_cb = [=](xsxml::xml_parse_status s, char *offset) {
             SAXParser::errorHandler(_saxParserImpl, s, offset);
         };
-        _sax3Handler.xml_start_decl_attr_cb = [=](const char *name, size_t nameLen, const char *value, size_t valueLen) {
+        _sax3Handler.xml_decl_attr_cb = [=](const char *name, size_t nameLen, const char *value, size_t valueLen) {
+            _xmlDeclAttrs.push_back(name);
+            _xmlDeclAttrs.push_back(value);
             SAXParser::startDeclAttr(_saxParserImpl, (const XML_CHAR *)name, nameLen, (const XML_CHAR*) value, valueLen);
+        };
+        _sax3Handler.xml_end_decl_attr_cb = [=]() {
+            if (!_xmlDeclAttrs.empty())
+            {
+                _xmlDeclAttrs.push_back(nullptr);
+                SAXParser::xmlDeclarationHandler(_saxParserImpl, (const XML_CHAR **)&_xmlDeclAttrs[0]);
+                _xmlDeclAttrs.clear();
+            }
+            else
+            {
+                const char *attr = nullptr;
+                const char **attrs = &attr;
+                SAXParser::xmlDeclarationHandler(_saxParserImpl, (const XML_CHAR **)attrs);
+            }
+            
+            SAXParser::endDeclAttr(_saxParserImpl);
         };
     };
 
@@ -89,6 +108,7 @@ private:
     SAXParser *_saxParserImpl;
     xsxml::string_view _curEleName;
     std::vector<const char *> _curEleAttrs;
+    std::vector<const char *> _xmlDeclAttrs;
     xsxml::xml_sax3_parse_cb _sax3Handler;
 };
 
@@ -138,10 +158,10 @@ bool SAXParser::parseIntrusive(char *xmlData, size_t dataLength)
 }
 
 void SAXParser::startElement(void *ctx, const XML_CHAR *name,
-                             const XML_CHAR **atts)
+                             const XML_CHAR **attrs)
 {
     ((SAXParser *)(ctx))
-        ->_delegator->startElement(ctx, (char *)name, (const char **)atts);
+        ->_delegator->startElement(ctx, (char *)name, (const char **)attrs);
 }
 void SAXParser::endElement(void *ctx, const XML_CHAR *name, size_t len)
 {
@@ -194,6 +214,10 @@ void SAXParser::startDeclAttr(void *ctx, const XML_CHAR *name, size_t nameLen, c
 void SAXParser::endDeclAttr(void *ctx)
 {
     ((SAXParser *)(ctx))->_delegator->endDeclAttr(ctx);
+}
+void SAXParser::xmlDeclarationHandler(void *ctx, const XML_CHAR **attrs)
+{
+    ((SAXParser *)(ctx)) ->_delegator->xmlDeclarationHandler(ctx, (const char **)attrs);
 }
 void SAXParser::setDelegator(SAXDelegator *delegator)
 {

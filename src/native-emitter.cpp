@@ -140,11 +140,23 @@ public:
     {
         Napi::Object declAttr = Napi::Object::New(_env);
         declAttr.Set(std::string(name, nameLen), std::string(value, valueLen));
-        this->emitEvent("xmlDeclAttr", declAttr);
+        this->emitEvent("startXmlDeclAttr", declAttr);
     }
     void endDeclAttr(void *ctx)
     {
-        this->emitEvent("endXmlDecAttr");
+        this->emitEvent("endXmlDeclAttr");
+    }
+    void xmlDeclarationHandler(void *ctx, const char **attrs)
+    {
+        Napi::Object attribs = Napi::Object::New(_env);
+        while (*attrs != nullptr)
+        {
+            const char *name = *attrs++;
+            const char *val = *attrs++;
+            attribs.Set(name, val);
+        }
+
+        this->emitEvent("xmlDecl", attribs);
     }
 
 private:

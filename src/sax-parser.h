@@ -37,7 +37,7 @@ class SAXDelegator
 {
 public:
     virtual ~SAXDelegator() {}
-    virtual void startElement(void *ctx, const char *name, const char **atts) = 0;
+    virtual void startElement(void *ctx, const char *name, const char **attrs) = 0;
     virtual void endElement(void *ctx, const char *name, size_t len) = 0;
     virtual void startAttribute(void *ctx, const char *name, size_t nameLen,
                                 const char *value, size_t valueLen) = 0;
@@ -51,6 +51,7 @@ public:
     virtual void errorHandler(void *ctx, xsxml::xml_parse_status, char *) = 0;
     virtual void startDeclAttr(void *ctx, const char *name, size_t nameLen, const char* value, size_t valueLen) = 0;
     virtual void endDeclAttr(void *ctx) = 0;
+    virtual void xmlDeclarationHandler(void *ctx, const char **attrs) = 0;
 };
 
 class SAXParser
@@ -80,6 +81,7 @@ public:
     static void errorHandler(void *ctx, xsxml::xml_parse_status, char *);
     static void startDeclAttr(void *ctx, const XML_CHAR *name, size_t nameLen, const XML_CHAR* value, size_t valueLen);
     static void endDeclAttr(void *ctx);
+    static void xmlDeclarationHandler(void *ctx, const XML_CHAR **attrs);
 };
 
 } // namespace saxparser

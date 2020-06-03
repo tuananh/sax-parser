@@ -13,7 +13,7 @@ Inspired by `node-expat`. Will implement the missing ones.
 * `#on('text' function (text) {})`
 * `#on('processingInstruction', function (target, data) {})` **to be implemented**
 * `#on('comment', function (comment) {})`
-* `#on('xmlDecl', function (version, encoding, standalone) {})` **to be implemented**
+* `#on('xmlDecl', function ({version, encoding, standalone}) {})`
 * `#on('cdata', function (cdata) {})`
 * `#on('entityDecl', function (entityName, isParameterEntity, value, base, systemId, publicId, notationName) {})` **to be implemented**
 * `#on('error', function ({code, offset}) {})`
