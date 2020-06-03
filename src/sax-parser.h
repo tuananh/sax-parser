@@ -49,7 +49,8 @@ public:
     virtual void endDocument(void *ctx) = 0;
     virtual void doctypeHandler(void *ctx, const char *s, size_t len) = 0;
     virtual void errorHandler(void *ctx, xsxml::xml_parse_status, char *) = 0;
-    virtual void xmlDeclHandler(void *ctx, const char *s, size_t len) = 0;
+    virtual void startDeclAttr(void *ctx, const char *name, size_t nameLen, const char* value, size_t valueLen) = 0;
+    virtual void endDeclAttr(void *ctx) = 0;
 };
 
 class SAXParser
@@ -77,7 +78,8 @@ public:
     static void endDocument(void *ctx);
     static void doctypeHandler(void *ctx, const XML_CHAR *doctype, size_t len);
     static void errorHandler(void *ctx, xsxml::xml_parse_status, char *);
-    static void xmlDeclHandler(void *ctx, const XML_CHAR *decl, size_t len);
+    static void startDeclAttr(void *ctx, const XML_CHAR *name, size_t nameLen, const XML_CHAR* value, size_t valueLen);
+    static void endDeclAttr(void *ctx);
 };
 
 } // namespace saxparser

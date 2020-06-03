@@ -76,8 +76,8 @@ public:
         _sax3Handler.xml_error_cb = [=](xsxml::xml_parse_status s, char *offset) {
             SAXParser::errorHandler(_saxParserImpl, s, offset);
         };
-        _sax3Handler.xml_declaration_cb = [=](const char *s, size_t len) {
-            SAXParser::xmlDeclHandler(_saxParserImpl, (const XML_CHAR *)s, len);
+        _sax3Handler.xml_start_decl_attr_cb = [=](const char *name, size_t nameLen, const char *value, size_t valueLen) {
+            SAXParser::startDeclAttr(_saxParserImpl, (const XML_CHAR *)name, nameLen, (const XML_CHAR*) value, valueLen);
         };
     };
 
@@ -117,7 +117,7 @@ bool SAXParser::parseIntrusive(char *xmlData, size_t dataLength)
     SAX2Hander handler;
     handler.setSAXParserImp(this);
 
-    xsxml::xml_sax3_parser::parse(xmlData, static_cast<int>(dataLength), handler);
+    xsxml::xml_sax3_parser::parse(xmlData, static_cast<int>(dataLength), handler, xsxml::parse_full);
     return true;
 
     // TODO(anh): introduce parse_error in no-recursive implementation as well
@@ -187,9 +187,13 @@ void SAXParser::errorHandler(void *ctx, xsxml::xml_parse_status s,
 {
     ((SAXParser *)(ctx))->_delegator->errorHandler(ctx, s, offset);
 }
-void SAXParser::xmlDeclHandler(void *ctx, const XML_CHAR *decl, size_t len)
+void SAXParser::startDeclAttr(void *ctx, const XML_CHAR *name, size_t nameLen, const XML_CHAR* value, size_t valueLen)
 {
-    ((SAXParser *)(ctx))->_delegator->xmlDeclHandler(ctx, (char *)decl, len);
+    ((SAXParser *)(ctx))->_delegator->startDeclAttr(ctx, (char *)name, nameLen, (char *)value, valueLen);
+}
+void SAXParser::endDeclAttr(void *ctx)
+{
+    ((SAXParser *)(ctx))->_delegator->endDeclAttr(ctx);
 }
 void SAXParser::setDelegator(SAXDelegator *delegator)
 {

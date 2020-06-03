@@ -63,6 +63,8 @@ inline std::string ParseStatusToString(xsxml::xml_parse_status s)
         return "ERR_APPEND_INVALID_ROOT";
     case xsxml::xml_parse_status::status_no_document_element:
         return "ERR_NO_DOCUMENT_ELEMENT";
+    case xsxml::xml_parse_status::status_bad_decl:
+        return "ERR_BAD_XML_DECLARATION";
     case xsxml::xml_parse_status::status_ok:
         return "OK"; // should not get here
     default:
@@ -134,9 +136,15 @@ public:
         error.Set("offset", std::string(offset, 10)); // peak 10 chars
         this->emitEvent("error", error);
     }
-    void xmlDeclHandler(void *ctx, const char *decl, size_t len)
+    void startDeclAttr(void *ctx, const char *name, size_t nameLen, const char *value, size_t valueLen)
     {
-        this->emitEvent("xmlDecl", std::string(decl, len));
+        Napi::Object declAttr = Napi::Object::New(_env);
+        declAttr.Set(std::string(name, nameLen), std::string(value, valueLen));
+        this->emitEvent("xmlDeclAttr", declAttr);
+    }
+    void endDeclAttr(void *ctx)
+    {
+        this->emitEvent("endXmlDecAttr");
     }
 
 private:

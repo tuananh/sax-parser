@@ -4,7 +4,7 @@
     "description": "A very fast SAX parser for Node.js, written in C++.",
     "main": "index.js",
     "scripts": {
-        "test": "ava",
+        "test": "ava --verbose",
         "build": "node-gyp rebuild",
         "install": "node-gyp rebuild",
         "benchmark": "node benchmark",
