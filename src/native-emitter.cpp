@@ -134,6 +134,10 @@ public:
         error.Set("offset", std::string(offset, 10)); // peak 10 chars
         this->emitEvent("error", error);
     }
+    void xmlDeclHandler(void *ctx, const char *decl, size_t len)
+    {
+        this->emitEvent("xmlDecl", std::string(decl, len));
+    }
 
 private:
     const Napi::CallbackInfo *_cbInfo;

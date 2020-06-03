@@ -67,5 +67,9 @@ parser.on('error', ({ code, offset }) => {
     console.error('parse error: code=%s | offset=[%s]', code, offset)
 })
 
+parser.on('xmlDecl', (decl) => {
+    process.stdout.write(`<?${decl}?>\n`)
+})
+
 const xml = readFileSync(__dirname + '/../benchmark/test.xml', 'utf-8')
 parser.parse(xml)

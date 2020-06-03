@@ -76,6 +76,9 @@ public:
         _sax3Handler.xml_error_cb = [=](xsxml::xml_parse_status s, char *offset) {
             SAXParser::errorHandler(_saxParserImpl, s, offset);
         };
+        _sax3Handler.xml_declaration_cb = [=](const char *s, size_t len) {
+            SAXParser::xmlDeclHandler(_saxParserImpl, (const XML_CHAR *)s, len);
+        };
     };
 
     void setSAXParserImp(SAXParser *parser) { _saxParserImpl = parser; }
@@ -183,6 +186,10 @@ void SAXParser::errorHandler(void *ctx, xsxml::xml_parse_status s,
                              char *offset)
 {
     ((SAXParser *)(ctx))->_delegator->errorHandler(ctx, s, offset);
+}
+void SAXParser::xmlDeclHandler(void *ctx, const XML_CHAR *decl, size_t len)
+{
+    ((SAXParser *)(ctx))->_delegator->xmlDeclHandler(ctx, (char *)decl, len);
 }
 void SAXParser::setDelegator(SAXDelegator *delegator)
 {
