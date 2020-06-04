@@ -13,3 +13,8 @@ test('XML declaration test with standalone', async () => {
         ['xmlDecl', { version: '1.0', encoding: 'UTF-8', standalone: 'no' }],
     ])
 })
+
+test('XML declaration test', async () => {
+    const xml = "<?xml version='1.0'?>"
+    expect(await parse(xml)).toEqual([['xmlDecl', { version: '1.0' }]])
+})
