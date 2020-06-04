@@ -11,7 +11,7 @@ Inspired by `node-expat`. Will implement the missing ones.
 * `#on('startAttribute' function (attr) {})`
 * `#on('endAttribute' function () {})`
 * `#on('text' function (text) {})`
-* `#on('processingInstruction', function (target, data) {})` **to be implemented**
+* `#on('processingInstruction', function ({target, instruction}) {})`
 * `#on('comment', function (comment) {})`
 * `#on('xmlDecl', function ({version, encoding, standalone}) {})`
 * `#on('cdata', function (cdata) {})`

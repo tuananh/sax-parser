@@ -1,15 +1,15 @@
 const parse = require('.')
 
-test.skip('processingInstruction test with target & data', async () => {
+test('processingInstruction test with target & instruction', async () => {
     const xml = '<?I like XML?>'
     expect(await parse(xml)).toEqual([
-        ['processingInstruction', ['I', 'like XML']],
+        ['processingInstruction', { target: 'I', instruction: 'like XML' }],
     ])
 })
 
-test.skip('processingInstruction test with target & data', async () => {
-    const xml = '<?onlytarget?>'
+test('processingInstruction test with only target', async () => {
+    const xml = '<?targetonly?>'
     expect(await parse(xml)).toEqual([
-        ['processingInstruction', ['onlytarget', '']],
+        ['processingInstruction', { target: 'targetonly', instruction: '' }],
     ])
 })

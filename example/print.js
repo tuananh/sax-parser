@@ -83,5 +83,9 @@ parser.on('xmlDecl', (decl) => {
     process.stdout.write('?>\n')
 })
 
+parser.on('processingInstruction', (pi) => {
+    process.write(`<?${pi.target} ${pi.instruction}?>`)
+})
+
 const xml = readFileSync(__dirname + '/../benchmark/test.xml', 'utf-8')
 parser.parse(xml)

@@ -52,6 +52,7 @@ public:
     virtual void startDeclAttr(void *ctx, const char *name, size_t nameLen, const char* value, size_t valueLen) = 0;
     virtual void endDeclAttr(void *ctx) = 0;
     virtual void xmlDeclarationHandler(void *ctx, const char **attrs) = 0;
+    virtual void piHandler(void *ctx, const char *target, size_t, const char *instruction, size_t) = 0;
 };
 
 class SAXParser
@@ -82,6 +83,7 @@ public:
     static void startDeclAttr(void *ctx, const XML_CHAR *name, size_t nameLen, const XML_CHAR* value, size_t valueLen);
     static void endDeclAttr(void *ctx);
     static void xmlDeclarationHandler(void *ctx, const XML_CHAR **attrs);
+    static void piHandler(void *ctx, const XML_CHAR *target, size_t, const XML_CHAR* instruction, size_t);
 };
 
 } // namespace saxparser

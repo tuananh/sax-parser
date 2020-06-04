@@ -9,6 +9,9 @@ function parse(xml) {
     const parser = new SaxParser()
     return new Promise((resolve) => {
         var evsReceived = []
+        parser.on('processingInstruction', (pi) => {
+            evsReceived.push(['processingInstruction', pi])
+        })
         parser.on('startElement', function (name, attrs) {
             evsReceived.push(['startElement', name, attrs])
         })

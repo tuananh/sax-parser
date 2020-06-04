@@ -158,6 +158,14 @@ public:
 
         this->emitEvent("xmlDecl", attribs);
     }
+    void piHandler(void *ctx, const char *target, size_t targetLen,
+                        const char *instruction, size_t instructionLen)
+    {
+        Napi::Object pi = Napi::Object::New(_env);
+        pi.Set("target", std::string(target, targetLen));
+        pi.Set("instruction", std::string(instruction, instructionLen));
+        this->emitEvent("processingInstruction", pi);
+    }
 
 private:
     const Napi::CallbackInfo *_cbInfo;

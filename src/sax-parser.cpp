@@ -98,6 +98,9 @@ public:
             
             SAXParser::endDeclAttr(_saxParserImpl);
         };
+        _sax3Handler.xml_pi_cb = [=](const char *target, size_t targetLen, const char *instruction, size_t instructionLen) {
+            SAXParser::piHandler(_saxParserImpl, (const XML_CHAR *)target, targetLen, (const XML_CHAR*) instruction, instructionLen);
+        };
     };
 
     void setSAXParserImp(SAXParser *parser) { _saxParserImpl = parser; }
@@ -218,6 +221,10 @@ void SAXParser::endDeclAttr(void *ctx)
 void SAXParser::xmlDeclarationHandler(void *ctx, const XML_CHAR **attrs)
 {
     ((SAXParser *)(ctx)) ->_delegator->xmlDeclarationHandler(ctx, (const char **)attrs);
+}
+void SAXParser::piHandler(void *ctx, const XML_CHAR *target, size_t targetLen, const XML_CHAR* instruction, size_t instructionLen)
+{
+    ((SAXParser *)(ctx))->_delegator->piHandler(ctx, (char *)target, targetLen, (char *)instruction, instructionLen);
 }
 void SAXParser::setDelegator(SAXDelegator *delegator)
 {
