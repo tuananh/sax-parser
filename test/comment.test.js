@@ -1,36 +1,45 @@
 const parse = require('.')
 
-// TODO(anh): figure out why this test is failing
 test('only comment', async () => {
-    const xml = `<!--This is example of comment in XML1-->`
-    expect(await parse(xml)).toEqual([
-        ['comment', 'This is example of comment in XML1'],
-    ])
+    const xml = `<!--comment 1-->`
+    expect(await parse(xml)).toEqual([['comment', 'comment 1']])
 })
 
 test('single comment inside a node', async () => {
     const xml = `<hello>
-    <!--This is example of comment in XML1-->
+    <!--comment 1-->
     </hello>`
     expect(await parse(xml)).toEqual([
         ['startElement', 'hello', {}],
-        ['comment', 'This is example of comment in XML1'],
+        ['comment', 'comment 1'],
         ['endElement', 'hello'],
     ])
 })
 
 test('multiple comments test', async () => {
     const xml = `<hello>
-    <!--This is example of comment in XML1-->
-    <!--This is example of comment in XML2-->
-    <!--This is example of comment in XML3-->
+    <!--comment 1-->
+    <!--comment 2-->
+    <!--comment 3-->
     </hello>`
 
     expect(await parse(xml)).toEqual([
         ['startElement', 'hello', {}],
-        ['comment', 'This is example of comment in XML1'],
-        ['comment', 'This is example of comment in XML2'],
-        ['comment', 'This is example of comment in XML3'],
+        ['comment', 'comment 1'],
+        ['comment', 'comment 2'],
+        ['comment', 'comment 3'],
+        ['endElement', 'hello'],
+    ])
+})
+
+test('multiple comments test 2', async () => {
+    const xml = `<hello><!--comment 1--><!--comment 2-->world</hello>`
+
+    expect(await parse(xml)).toEqual([
+        ['startElement', 'hello', {}],
+        ['comment', 'comment 1'],
+        ['comment', 'comment 2'],
+        ['text', 'world'],
         ['endElement', 'hello'],
     ])
 })
