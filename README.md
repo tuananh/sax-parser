@@ -5,6 +5,10 @@ sax-parser
 ![license](https://badgen.net/npm/license/@tuananh/sax-parser)
 ==========
 
+<p align="center">
+  <img alt="need a logo, this is just sth i found on the web" src="logo.png" width="700">
+</p>
+
 🚨 ALPHA STATE: This is a very much work-in-progress now.
 
 ## What this is
