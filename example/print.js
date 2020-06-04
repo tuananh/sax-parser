@@ -78,7 +78,7 @@ parser.on('endXmlDeclAttr', () => {
 parser.on('xmlDecl', (decl) => {
     process.stdout.write('<? ')
     for (const key in decl) {
-        process.stdout.write(`${key}="${decl[key]}" `)    
+        process.stdout.write(`${key}="${decl[key]}" `)
     }
     process.stdout.write('?>\n')
 })
