@@ -52,6 +52,14 @@ test('element test with attribute', async () => {
     ])
 })
 
+test('element test with different quote character', async () => {
+    const xml = '<hello foo=\'bar\' baz="quux" test="test"/>'
+    expect(await parse(xml)).toEqual([
+        ['startElement', 'hello', { foo: 'bar', baz: 'quux', test: 'test' }],
+        ['endElement', 'hello'],
+    ])
+})
+
 test('element test: iwth namespaces', async () => {
     const xml = `<hello xmlns=\'http://localhost/\' xmlns:x="http://example.com/"></hello>`
     expect(await parse(xml)).toEqual([
