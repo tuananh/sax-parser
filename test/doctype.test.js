@@ -8,3 +8,40 @@ test('comment test', async () => {
         ['endElement', 'xml'],
     ])
 })
+
+test('doctype welform => should not throw', async () => {
+    const xmls = [
+        `<!DOCTYPE doc>`,
+        `<!DOCTYPE doc SYSTEM 'foo'>`,
+        `<!DOCTYPE doc SYSTEM \"foo\">`,
+        `<!DOCTYPE doc PUBLIC \"foo\" 'bar'>`,
+        `<!DOCTYPE doc PUBLIC \"foo'\">`,
+        `<!DOCTYPE doc SYSTEM 'foo' [<!ELEMENT foo 'ANY'>]>`,
+    ]
+    xmls.forEach((xml) => {
+        expect(async () => {
+            await parse(xml)
+        }).not.toThrow()
+    })
+})
+
+test('doctype not welformed => should throw', async () => {
+    const xmls = [
+        `<!DOCTYPE`,
+        `<!DOCTYPE doc`,
+        `<!DOCTYPE doc SYSTEM 'foo`,
+        `<!DOCTYPE doc SYSTEM \"foo`,
+        `<!DOCTYPE doc PUBLIC \"foo\" 'bar`,
+        `<!DOCTYPE doc PUBLIC \"foo'\"`,
+        `<!DOCTYPE doc SYSTEM 'foo' [<!ELEMENT foo 'ANY`,
+        `<!DOCTYPE doc SYSTEM 'foo' [<!ELEMENT foo 'ANY'>`,
+        `<!DOCTYPE doc SYSTEM 'foo' [<!ELEMENT foo 'ANY'>]`,
+        `<!DOCTYPE doc SYSTEM 'foo' [<!ELEMENT foo 'ANY'>] `,
+    ]
+
+    xmls.forEach(async (xml) => {
+        expect(async () => {
+            await parse(xml)
+        }).rejects.toThrow()
+    })
+})
