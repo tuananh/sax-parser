@@ -3,20 +3,6 @@ on: [push, pull_request]
 name: CI
 
 jobs:
-    # lint:
-    #   name: Lint
-    #   runs-on: ubuntu-latest
-    #   steps:
-    #     - uses: actions/checkout@v2
-    #     - name: Install Node.js 14
-    #       uses: actions/setup-node@v1
-    #       with:
-    #         node-version: v14.x
-    #     - name: Install dependencies
-    #       run: npm install
-    #     - name: Check linting
-    #       run: npm run lint
-
     test:
         name: Test
         strategy:
