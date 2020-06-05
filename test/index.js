@@ -1,8 +1,8 @@
 const SaxParser = require('..')
 
 /**
- * test helper
- * @param {*} xml
+ * test helper: parse a string and get all the listened events data back
+ * @param {string|Buffer} xml
  * @returns {*} array of events
  */
 function parse(xml) {
