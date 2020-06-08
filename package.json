@@ -8,7 +8,7 @@
     "build": "node-gyp rebuild",
     "install": "node-gyp rebuild",
     "benchmark": "node benchmark",
-    "fmt": "prettier --write **/*.js"
+    "fmt": "prettier --write **/*.js index.js"
   },
   "files": [
     "src/**",

@@ -17,6 +17,14 @@ test('element test: single element with text', async () => {
     ])
 })
 
+test('element test: empty', async () => {
+    const xml = '<hello></hello>'
+    expect(await parse(xml)).toEqual([
+        ['startElement', 'hello', {}],
+        ['endElement', 'hello'],
+    ])
+})
+
 test('element test: single element with text and line break', async () => {
     const xml = '<hello>foo\nbar</hello>'
     expect(await parse(xml)).toEqual([
@@ -60,7 +68,7 @@ test('element test with different quote character', async () => {
     ])
 })
 
-test('element test: iwth namespaces', async () => {
+test('element test: with namespaces', async () => {
     const xml = `<hello xmlns=\'http://localhost/\' xmlns:x="http://example.com/"></hello>`
     expect(await parse(xml)).toEqual([
         [

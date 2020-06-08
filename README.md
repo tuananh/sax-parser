@@ -227,4 +227,4 @@ npm run test
 - [addon-event-emitter](https://github.com/NickNaso/addon-event-emitter): How to create and use event emitter interface on Node.js add-ons
 - [addon-stream](https://github.com/NickNaso/addon-stream): How to use and create stream on Node.js native add-ons
 - [napi-example-transformstream](https://github.com/dmooney65/napi-example-transformstream): Simple transform stream implementation using node-addon-api
-- [Node.js C++ addon exmaples](https://github.com/nodejs/node-addon-examples)
+- [Node.js C++ addon examples](https://github.com/nodejs/node-addon-examples): Official Node.js C++ addon examples from Node.js
