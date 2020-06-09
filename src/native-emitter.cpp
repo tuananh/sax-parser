@@ -124,7 +124,14 @@ public:
         this->emitEvent("comment", std::string(s, len));
     }
     void startDocument(void *ctx) { this->emitEvent("startDocument"); }
-    void endDocument(void *ctx) { this->emitEvent("endDocument"); }
+    void endDocument(void *ctx)
+    {
+        this->emitEvent("endDocument");
+        // alias. use whatever suits you.
+        this->emitEvent("end");
+        this->emitEvent("finish");
+        this->emitEvent("done");
+    }
     void doctypeHandler(void *ctx, const char *doctype, size_t len)
     {
         this->emitEvent("doctype", std::string(doctype, len));
@@ -159,7 +166,7 @@ public:
         this->emitEvent("xmlDecl", attribs);
     }
     void piHandler(void *ctx, const char *target, size_t targetLen,
-                        const char *instruction, size_t instructionLen)
+                   const char *instruction, size_t instructionLen)
     {
         Napi::Object pi = Napi::Object::New(_env);
         pi.Set("target", std::string(target, targetLen));

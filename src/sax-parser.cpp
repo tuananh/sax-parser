@@ -80,7 +80,7 @@ public:
         _sax3Handler.xml_decl_attr_cb = [=](const char *name, size_t nameLen, const char *value, size_t valueLen) {
             _xmlDeclAttrs.push_back(name);
             _xmlDeclAttrs.push_back(value);
-            SAXParser::startDeclAttr(_saxParserImpl, (const XML_CHAR *)name, nameLen, (const XML_CHAR*) value, valueLen);
+            SAXParser::startDeclAttr(_saxParserImpl, (const XML_CHAR *)name, nameLen, (const XML_CHAR *)value, valueLen);
         };
         _sax3Handler.xml_end_decl_attr_cb = [=]() {
             if (!_xmlDeclAttrs.empty())
@@ -95,11 +95,11 @@ public:
                 const char **attrs = &attr;
                 SAXParser::xmlDeclarationHandler(_saxParserImpl, (const XML_CHAR **)attrs);
             }
-            
+
             SAXParser::endDeclAttr(_saxParserImpl);
         };
         _sax3Handler.xml_pi_cb = [=](const char *target, size_t targetLen, const char *instruction, size_t instructionLen) {
-            SAXParser::piHandler(_saxParserImpl, (const XML_CHAR *)target, targetLen, (const XML_CHAR*) instruction, instructionLen);
+            SAXParser::piHandler(_saxParserImpl, (const XML_CHAR *)target, targetLen, (const XML_CHAR *)instruction, instructionLen);
         };
     };
 
@@ -210,7 +210,7 @@ void SAXParser::errorHandler(void *ctx, xsxml::xml_parse_status s,
 {
     ((SAXParser *)(ctx))->_delegator->errorHandler(ctx, s, offset);
 }
-void SAXParser::startDeclAttr(void *ctx, const XML_CHAR *name, size_t nameLen, const XML_CHAR* value, size_t valueLen)
+void SAXParser::startDeclAttr(void *ctx, const XML_CHAR *name, size_t nameLen, const XML_CHAR *value, size_t valueLen)
 {
     ((SAXParser *)(ctx))->_delegator->startDeclAttr(ctx, (char *)name, nameLen, (char *)value, valueLen);
 }
@@ -220,9 +220,9 @@ void SAXParser::endDeclAttr(void *ctx)
 }
 void SAXParser::xmlDeclarationHandler(void *ctx, const XML_CHAR **attrs)
 {
-    ((SAXParser *)(ctx)) ->_delegator->xmlDeclarationHandler(ctx, (const char **)attrs);
+    ((SAXParser *)(ctx))->_delegator->xmlDeclarationHandler(ctx, (const char **)attrs);
 }
-void SAXParser::piHandler(void *ctx, const XML_CHAR *target, size_t targetLen, const XML_CHAR* instruction, size_t instructionLen)
+void SAXParser::piHandler(void *ctx, const XML_CHAR *target, size_t targetLen, const XML_CHAR *instruction, size_t instructionLen)
 {
     ((SAXParser *)(ctx))->_delegator->piHandler(ctx, (char *)target, targetLen, (char *)instruction, instructionLen);
 }
