@@ -4,7 +4,6 @@ const fs = require('fs')
 const path = require('path')
 const SaxParser = require('..')
 
-const FILE_TO_READ = '/../benchmark/test.xml'
 const parser = new SaxParser()
 
 parser.on('startElement', (name, attrs) => {
@@ -15,6 +14,8 @@ parser.on('text', (text) => {
     console.log('text', text)
 })
 
-const inStream = fs.createReadStream(path.join(__dirname, FILE_TO_READ))
+const inStream = fs.createReadStream(
+    path.join(__dirname, '/../benchmark/test.xml')
+)
 
 inStream.pipe(parser)
