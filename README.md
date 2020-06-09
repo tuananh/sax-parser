@@ -9,8 +9,6 @@ sax-parser
   <img alt="need a logo, this is just sth i found on the web" src="logo.png" width="700">
 </p>
 
-🚨 ALPHA STATE: This is a very much work-in-progress now.
-
 ## What this is
 
 A very fast SAX parser for Node.js written in C++. Native module for performance reason.
