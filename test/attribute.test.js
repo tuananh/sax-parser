@@ -16,3 +16,17 @@ test('attribute test: element with self closing tag', async () => {
         ['endElement', 'w:pStyle'],
     ])
 })
+
+test('attribute test: trailing attribute with no value should throw', async () => {
+    const xml = '<hello key />'
+    expect(async () => {
+        await parse(xml)
+    }).rejects.toThrow()
+})
+
+test('attribute test: unquoted attribute should throw', async () => {
+    const xml = '<xml hello=world />'
+    expect(async () => {
+        await parse(xml)
+    }).rejects.toThrow()
+})

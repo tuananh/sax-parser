@@ -1,4 +1,5 @@
 const SaxParser = require('..')
+const parse = require('.')
 
 describe('validate argument passed to parse()', () => {
     test('no argument => throw', async () => {
@@ -27,5 +28,14 @@ describe('validate argument passed to parse()', () => {
         expect(() => {
             parser.parse(Buffer.from('<hello>world</hello>'))
         }).not.toThrow()
+    })
+
+    test('parse Buffer', async () => {
+        const xml = '<hello>world</hello>'
+        expect(await parse(Buffer.from(xml))).toEqual([
+            ['startElement', 'hello', {}],
+            ['text', 'world'],
+            ['endElement', 'hello'],
+        ])
     })
 })

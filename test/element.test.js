@@ -79,3 +79,13 @@ test('element test: with namespaces', async () => {
         ['endElement', 'hello'],
     ])
 })
+
+test('element test: element has a self closing child', async () => {
+    const xml = '<hello><child /></hello>'
+    expect(await parse(xml)).toEqual([
+        ['startElement', 'hello', {}],
+        ['startElement', 'child', {}],
+        ['endElement', 'child'],
+        ['endElement', 'hello'],
+    ])
+})

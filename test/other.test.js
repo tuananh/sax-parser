@@ -8,12 +8,3 @@ test('parse twice should be fine', async () => {
         await parse(xml)
     }).not.toThrow()
 })
-
-test('parse Buffer', async () => {
-    const xml = '<hello>world</hello>'
-    expect(await parse(Buffer.from(xml))).toEqual([
-        ['startElement', 'hello', {}],
-        ['text', 'world'],
-        ['endElement', 'hello'],
-    ])
-})

@@ -5,6 +5,13 @@ test('only comment', async () => {
     expect(await parse(xml)).toEqual([['comment', 'comment 1']])
 })
 
+test('comment with a single dash in it', async () => {
+    const xml = `<!--comment with a single dash- in it-->`
+    expect(await parse(xml)).toEqual([
+        ['comment', 'comment with a single dash- in it'],
+    ])
+})
+
 test('single comment inside a node', async () => {
     const xml = `<hello>
     <!--comment 1-->
