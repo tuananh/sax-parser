@@ -51,157 +51,34 @@ ops/sec: higher is better.
 
 ## Usage
 
-See [`example/print.js`](example/print.js) for an example how to use `@tuananh/sax-parser` to pretty print XML to `process.stdout`.
+- See [`example/print.js`](example/print.js) for an example how to use this library to pretty print XML to `process.stdout`.
+- Or [`example/stream.js`](example/stream.js) for an example of using this library with stream.
+- For complete API documentation, see [API.md](API.md).
 
-For complete API documentation, see [API.md](API.md).
+Sample usage
 
 ```js
-const { readFileSync } = require('fs')
-const SaxParser = require('.')
+const fs = require('fs')
+const path = require('path')
+const SaxParser = require('..')
 
 const parser = new SaxParser()
 
-let depth = 0
-parser.on('startElement', (name) => {
-    let str = ''
-    for (let i = 0; i < depth; ++i) str += '  ' // indentation
-    str += `<${name}>`
-    process.stdout.write(str + '\n')
-    depth++
-})
+const readStream = fs.createReadStream(
+    path.join(__dirname, '/../benchmark/test.xml')
+)
 
-parser.on('text', (text) => {
-    let str = ''
-    for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
-    str += text
-    process.stdout.write(str + '\n')
-})
-
-parser.on('endElement', (name) => {
-    depth--
-    let str = ''
-    for (let i = 0; i < depth; ++i) str += '  ' // indentation
-    str += `<${name}>`
-    process.stdout.write(str + '\n')
-})
-
-parser.on('startAttribute', (name, value) => {
-    // console.log('startAttribute', name, value)
-})
-
-parser.on('endAttribute', () => {
-    // console.log('endAttribute')
-})
-
-parser.on('cdata', (cdata) => {
-    let str = ''
-    for (let i = 0; i < depth + 1; ++i) str += '  ' // indentation
-    str += `<![CDATA[${cdata}]]>`
-    process.stdout.write(str)
-    process.stdout.write('\n')
-})
-
-parser.on('comment', (comment) => {
-    process.stdout.write(`<!--${comment}-->\n`)
-})
-
-parser.on('doctype', (doctype) => {
-    process.stdout.write(`<!DOCTYPE ${doctype}>\n`)
-})
-
-parser.on('startDocument', () => {
-    process.stdout.write(`<!--=== START ===-->\n`)
-})
-
-parser.on('endDocument', () => {
-    process.stdout.write(`<!--=== END ===-->`)
-})
-
-const xml = readFileSync(__dirname + '/benchmark/test.xml', 'utf-8')
-parser.parse(xml)
-```
-
-output
-
-```xml
-<!--=== START ===-->
-<breakfast_menu>
-  <food>
-    <name>
-        Belgian Waffles
-    <name>
-    <sometext>
-        <![CDATA[They're saying "x < y" & that "z > y" so I guess that means that z > x]]>
-    <sometext>
-<!--This is example of comment in XML-->
-    <price>
-        $5.95
-    <price>
-    <description>
-        Two of our famous Belgian Waffles with plenty of real maple syrup
-    <description>
-    <calories>
-        650
-    <calories>
-  <food>
-  <food>
-    <name>
-        Strawberry Belgian Waffles
-    <name>
-    <price>
-        $7.95
-    <price>
-    <description>
-        Light Belgian waffles covered with strawberries and whipped cream
-    <description>
-    <calories>
-        900
-    <calories>
-  <food>
-  <food>
-    <name>
-        Berry-Berry Belgian Waffles
-    <name>
-    <price>
-        $8.95
-    <price>
-    <description>
-        Light Belgian waffles covered with an assortment of fresh berries and whipped cream
-    <description>
-    <calories>
-        900
-    <calories>
-  <food>
-  <food>
-    <name>
-        French Toast
-    <name>
-    <price>
-        $4.50
-    <price>
-    <description>
-        Thick slices made from our homemade sourdough bread
-    <description>
-    <calories>
-        600
-    <calories>
-  <food>
-  <food>
-    <name>
-        Homestyle Breakfast
-    <name>
-    <price>
-        $6.95
-    <price>
-    <description>
-        Two eggs, bacon or sausage, toast, and our ever-popular hash browns
-    <description>
-    <calories>
-        950
-    <calories>
-  <food>
-<breakfast_menu>
-<!--=== END ===-->
+readStream
+    .pipe(parser)
+    .on('startElement', (name, attrs) => {
+        console.log('name', name)
+    })
+    .on('text', (text) => {
+        console.log('text', text)
+    })
+    .on('end', () => {
+        console.log('done')
+    })
 ```
 
 ## Development
