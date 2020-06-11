@@ -18,4 +18,10 @@ describe('bom test', () => {
             ['endElement', 'hello'],
         ])
     })
+
+    // TODO(anh): this test is currently fail. it resolves instead of throw
+    test.skip('2 bom (beginning) => should throw', async () => {
+        const xml = '\uFEFF\uFEFF<hello>world</hello>'
+        expect(() => parse(xml)).rejects.toThrow()
+    })
 })
