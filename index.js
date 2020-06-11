@@ -9,12 +9,11 @@ inherits(SaxParser, EventEmitter)
 inherits(SaxParser, Stream)
 
 SaxParser.prototype.write = function (data) {
-    const result = this.parse(data)
-    return result
+    return this.parse(data)
 }
 
 SaxParser.prototype.end = function (data) {
-    const result = this.parse(data || '', true)
+    return this.parse(data || '')
 }
 
 module.exports = SaxParser

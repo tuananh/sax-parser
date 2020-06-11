@@ -31,9 +31,6 @@ public:
                                       (const XML_CHAR *)value, valueLen);
         };
         _sax3Handler.xml_end_attr_cb = [=]() {
-            SAXParser::endAttribute(_saxParserImpl);
-        };
-        _sax3Handler.xml_end_attr_cb = [=]() {
             if (!_curEleAttrs.empty())
             {
                 _curEleAttrs.push_back(nullptr);
