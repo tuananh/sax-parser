@@ -1,7 +1,7 @@
 {
   "name": "@tuananh/sax-parser",
-  "version": "1.0.1",
-  "description": "A very fast SAX parser for Node.js, written in C++.",
+  "version": "1.0.2",
+  "description": "An extremely fast SAX parser for Node.js, written in C++.",
   "main": "index.js",
   "scripts": {
     "test": "jest",
