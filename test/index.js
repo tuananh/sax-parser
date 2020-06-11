@@ -1,11 +1,11 @@
 const SaxParser = require('..')
 
 /**
- * test helper: parse a string and get all the listened events data back
+ * test helper: parse string(s) and get all the listened events data back
  * @param {string|Buffer} xml
  * @returns {*} array of events
  */
-function parse(xml) {
+function parse() {
     const parser = new SaxParser()
     return new Promise((resolve) => {
         var evsReceived = []
@@ -37,7 +37,11 @@ function parse(xml) {
             resolve(evsReceived)
         })
 
-        parser.parse(xml)
+        for (let i = 0; i < arguments.length; i++) {
+            const arg = arguments[i]
+            parser.write(arg)
+        }
+        parser.write(null)
     })
 }
 
