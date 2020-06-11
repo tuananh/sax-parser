@@ -38,4 +38,13 @@ describe('utf8 test', () => {
             ['endElement', 'КоммерческаяИнформация'],
         ])
     })
+
+    test('cyrillic', async () => {
+        const xml = '<hello>тест</hello>'
+        expect(await parse(xml)).toEqual([
+            ['startElement', 'hello', {}],
+            ['text', 'тест'],
+            ['endElement', 'hello'],
+        ])
+    })
 })
