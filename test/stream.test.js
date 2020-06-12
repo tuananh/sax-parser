@@ -1,4 +1,6 @@
+const { Readable } = require('stream')
 const parse = require('.')
+const SaxParser = require('..')
 
 describe('stream test', () => {
     test('stream test: 1 root node with 10_000 children elements', async () => {
@@ -23,5 +25,34 @@ describe('stream test', () => {
         }
 
         expect(await fn()).toEqual(expected)
+    })
+
+    test('stream test: number of `startElement` and `endElement` ev called should be correct', async () => {
+        const parser = new SaxParser()
+        const s = new Readable()
+        const COUNT = 1_000_000
+
+        s._read = () => {}
+
+        s.push('<foo>')
+        for (let i = 0; i < COUNT; i += 1) {
+            s.push('<bar />')
+        }
+        s.push('</foo>')
+        s.push(null)
+
+        let startEleCnt = 0
+        let endEleCnt = 0
+        parser.on('startElement', () => {
+            startEleCnt += 1
+        })
+
+        parser.on('endElement', () => {
+            endEleCnt += 1
+        })
+        parser.on('endDocument', () => {
+            expect(startEleCnt).toEqual(COUNT + 2)
+            expect(endEleCnt).toEqual(COUNT + 2)
+        })
     })
 })
