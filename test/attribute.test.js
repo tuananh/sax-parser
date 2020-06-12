@@ -31,4 +31,42 @@ describe('attribute test', () => {
             await parse(xml)
         }).rejects.toThrow()
     })
+
+    test('attribute value contains equal sign => should parse correctly', async () => {
+        const valids = [
+            '<foo baz="baz=quux"></foo>',
+            "<foo baz='baz=quux'></foo>",
+        ]
+        valids.forEach(async (xml) => {
+            expect(await parse(xml)).toEqual([
+                ['startElement', 'foo', { baz: 'baz=quux' }],
+                ['endElement', 'foo'],
+            ])
+        })
+    })
+
+    test('attribute key contains special chars => should parse correctly', async () => {
+        const valids = [
+            '<foo _baz="baz=baz" :quux="quux=quux"></foo>',
+            '<foo _baz=\'baz=baz\' :quux="quux=quux"></foo>',
+        ]
+        valids.forEach(async (xml) => {
+            expect(await parse(xml)).toEqual([
+                [
+                    'startElement',
+                    'foo',
+                    { _baz: 'baz=baz', ':quux': 'quux=quux' },
+                ],
+                ['endElement', 'foo'],
+            ])
+        })
+    })
+
+    test('tab \\t should be ignore between attribs', async () => {
+        const xml = '<foo baz="baz"\t quux="quux"/>'
+        expect(await parse(xml)).toEqual([
+            ['startElement', 'foo', { baz: 'baz', quux: 'quux' }],
+            ['endElement', 'foo'],
+        ])
+    })
 })

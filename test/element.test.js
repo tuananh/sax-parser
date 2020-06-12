@@ -1,8 +1,8 @@
 const parse = require('.')
 
 describe('element test', () => {
-    test('simple self-close element', () => {
-        const valids = ['<hello/>', '<hello />']
+    test('simple self-close element with 0, 1 or more space', () => {
+        const valids = ['<hello/>', '<hello />', '<hello    />']
         valids.forEach(async (xml) => {
             expect(await parse(xml)).toEqual([
                 ['startElement', 'hello', {}],
