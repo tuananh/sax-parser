@@ -32,14 +32,14 @@ describe('attribute test', () => {
         }).rejects.toThrow()
     })
 
-    test('attribute value contains equal sign => should parse correctly', async () => {
+    test('attribute value contains special char => should parse correctly', async () => {
         const valids = [
-            '<foo baz="baz=quux"></foo>',
-            "<foo baz='baz=quux'></foo>",
+            '<foo baz="baz=/>quux"></foo>',
+            "<foo baz='baz=/>quux'></foo>",
         ]
         valids.forEach(async (xml) => {
             expect(await parse(xml)).toEqual([
-                ['startElement', 'foo', { baz: 'baz=quux' }],
+                ['startElement', 'foo', { baz: 'baz=/>quux' }],
                 ['endElement', 'foo'],
             ])
         })
