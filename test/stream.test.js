@@ -3,6 +3,24 @@ const parse = require('.')
 const SaxParser = require('..')
 
 describe('stream test', () => {
+    // ref: see https://github.com/tuananh/sax-parser/issues/10
+    test.skip('should be able to parse incomplete stanza in each chunk but complete XML overall', async () => {
+        expect(() => {
+            const parser = new SaxParser()
+            const s = new Readable()
+
+            s._read = () => {}
+
+            s.push('<foo')
+            s.push('>world')
+            s.push('></foo')
+            s.push('>')
+            s.push(null)
+
+            s.pipe(parser)
+        }).not.toThrow()
+    })
+
     test('stream test: 1 root node with 10_000 children elements', async () => {
         const expected = [['startElement', 'hello', {}]]
         const NUM_CHILDREN = 10_000
@@ -27,7 +45,7 @@ describe('stream test', () => {
         expect(await fn()).toEqual(expected)
     })
 
-    test('stream test: number of `startElement` and `endElement` ev called should be correct', async () => {
+    test('number of `startElement` and `endElement` ev called should be correct', async () => {
         const parser = new SaxParser()
         const s = new Readable()
         const COUNT = 1_000_000
