@@ -1,25 +1,36 @@
 const parse = require('.')
 
 describe('multiple root elements (empty)', () => {
-    test('multiple root elements', async () => {
-        const xml = '<hello></hello><hello2></hello2>'
+    test('multiple root elements: both empty', async () => {
+        const xml = '<foo></foo><bar></bar>'
         expect(await parse(xml)).toEqual([
-            ['startElement', 'hello', {}],
-            ['endElement', 'hello'],
-            ['startElement', 'hello2', {}],
-            ['endElement', 'hello2'],
+            ['startElement', 'foo', {}],
+            ['endElement', 'foo'],
+            ['startElement', 'bar', {}],
+            ['endElement', 'bar'],
         ])
     })
 
-    test('multiple root elements with text', async () => {
-        const xml = '<hello>world</hello><hello2>world2</hello2>'
+    test('multiple root elements: one has text', async () => {
+        const xml = '<foo></foo><bar>baz</bar>'
         expect(await parse(xml)).toEqual([
-            ['startElement', 'hello', {}],
-            ['text', 'world'],
-            ['endElement', 'hello'],
-            ['startElement', 'hello2', {}],
-            ['text', 'world2'],
-            ['endElement', 'hello2'],
+            ['startElement', 'foo', {}],
+            ['endElement', 'foo'],
+            ['startElement', 'bar', {}],
+            ['text', 'baz'],
+            ['endElement', 'bar'],
+        ])
+    })
+
+    test('multiple root elements: both with text', async () => {
+        const xml = '<foo>bar</foo><baz>quux</baz>'
+        expect(await parse(xml)).toEqual([
+            ['startElement', 'foo', {}],
+            ['text', 'bar'],
+            ['endElement', 'foo'],
+            ['startElement', 'baz', {}],
+            ['text', 'quux'],
+            ['endElement', 'baz'],
         ])
     })
 })
