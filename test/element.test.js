@@ -115,4 +115,10 @@ describe('element test', () => {
             ['endElement', 'hello'],
         ])
     })
+
+    test('tag name starts with ampersand => throw', async () => {
+        expect(async () => {
+            await parse('<&foo/>')
+        }).rejects.toThrow()
+    })
 })
