@@ -3,6 +3,7 @@
     {
       "target_name": "sax_parser",
       "sources": [
+        "src/bytebuffer.cpp",
         "src/binding.cpp",
         "src/native-emitter.cpp",
         "src/sax-parser.cpp"
