@@ -1,5 +1,6 @@
 #include "sax-parser.h"
-
+#include "bytebuffer.h"
+#include <algorithm>
 #include <vector>
 
 #include "../vendor/xsxml/xsxml/no-recursive/xsxml.hpp"
@@ -9,12 +10,59 @@ namespace saxparser
 {
 typedef unsigned char XML_CHAR;
 
+const size_t kDefaultBufferSize = 1024;
+
+const uint8_t kLookupWhitespace[256] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, // 0
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 1
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 2
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 3
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 4
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 5
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 6
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 7
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 8
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 9
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // A
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // B
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // C
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // D
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // E
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // F
+};
+
+const uint8_t kLookupSkipTag[256] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //0
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
+    0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, //2
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, //3
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //4
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //5
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //6
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //7
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //8
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //9
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //A
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //B
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //C
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //D
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //E
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //F
+};
+
 /// xsxml SAX2 handler
 class SAX2Hander
 {
     friend class SAXParser;
 
 public:
+    enum parse_result
+    {
+        kParseOk = 0,
+        kParseStanzaLimitHit,
+        kParseInvalidXml
+    };
+
     SAX2Hander() : _saxParserImpl(0)
     {
         _curEleAttrs.reserve(64);
@@ -104,12 +152,200 @@ public:
 
     operator xsxml::xml_sax3_parse_cb *() { return &_sax3Handler; }
 
+    parse_result doProcess(size_t start, size_t end, void *userData)
+    {
+        uint8_t *ptr = const_cast<uint8_t *>(_buffer.Data());
+        size_t maxEndPosition = _maxStanzaBytes > 0 ? std::min(_maxStanzaBytes, end) : end;
+
+        int64_t end_stanza_index = findStanzaUpperLimit(ptr, start, maxEndPosition);
+
+        if (end_stanza_index == -1)
+        {
+            reset(false);
+            return kParseInvalidXml;
+        }
+
+        size_t end_stanza_pos = static_cast<size_t>(end_stanza_index);
+
+        if (end_stanza_pos == maxEndPosition)
+        {
+            if (_maxStanzaBytes && maxEndPosition == _maxStanzaBytes)
+            {
+                reset(false);
+                return kParseStanzaLimitHit;
+            }
+
+            if (_nestedLevel == -1 && _processRoot == false)
+            {
+                //finished the stream
+                // end_stream_handler_(userData, _rootName);
+                reset(true);
+                return kParseOk;
+            }
+
+            return kParseOk;
+        }
+
+        end_stanza_pos++;
+
+        if (!pushStanza(ptr, end_stanza_pos, userData))
+        {
+            reset(false);
+            return kParseInvalidXml;
+        }
+
+        _buffer.Consume(end_stanza_pos);
+
+        size_t remaining = _buffer.Length();
+
+        if (!remaining)
+            return kParseOk;
+
+        return doProcess(0, remaining, userData);
+    }
+
+    parse_result write(const uint8_t *data, size_t length, void *userData)
+    {
+        size_t last_index = _buffer.Length();
+        _buffer.WriteBytes(data, length);
+        parse_result result = doProcess(last_index, _buffer.Length(), userData);
+
+        if (result == kParseOk && _buffer.Capacity() > kDefaultBufferSize)
+            _buffer.Resize(std::max(_buffer.Length(), kDefaultBufferSize));
+
+        return result;
+    }
+
+    size_t findStanzaUpperLimit(const uint8_t *ptr, size_t start, size_t end)
+    {
+        size_t index = start;
+
+        if (_lastStartTagIndex == -1)
+        {
+            while (index < end && kLookupWhitespace[ptr[index]])
+                index++;
+
+            if (index < end && ptr[index] != '<')
+                return -1;
+        }
+
+        for (; index < end; index++)
+        {
+            switch (ptr[index])
+            {
+            case '<':
+
+                if (_firstStartTagIndex == -1)
+                    _firstStartTagIndex = index;
+
+                _lastStartTagIndex = index;
+                break;
+
+            case '>':
+
+                if (_lastStartTagIndex == -1)
+                    return -1;
+
+                if (ptr[_lastStartTagIndex + 1] == '/')
+                {
+                    _nestedLevel--;
+                }
+                else
+                {
+                    if (kLookupSkipTag[ptr[index - 1]] == 0)
+                        _nestedLevel++;
+                }
+
+                if (_nestedLevel == 0)
+                    return index;
+
+                break;
+            }
+        }
+
+        return index;
+    }
+
+    bool processRootElement(uint8_t *buffer, size_t length, void *userData)
+    {
+        if (!length)
+            return false;
+
+        ByteBuffer rootbuff(length + 1);
+        rootbuff.WriteBytes(buffer, length - 1);
+        rootbuff.WriteBytes(reinterpret_cast<const uint8_t *>("/>"), 2);
+
+        // TODO(anh): add pugixml
+        // pugi::xml_parse_status result = pugi_doc_.load_buffer_inplace(const_cast<uint8_t *>(rootbuff.Data()), rootbuff.Length(), pugi::parse_default, pugi::encoding_utf8).status;
+
+        // if (result != pugi::status_ok)
+        //     return false;
+
+        // if (!start_stream_handler_(userData, pugi_doc_, strip_invalid_utf8_))
+        //     return false;
+
+        //drop all bytes so far
+        // _rootName = pugi_doc_.document_element().name();
+        _processRoot = false;
+        _lastStartTagIndex = -1;
+        _firstStartTagIndex = -1;
+
+        return true;
+    }
+
+    bool pushStanza(uint8_t *buffer, size_t length, void *userData)
+    {
+        if (_processRoot)
+            return processRootElement(buffer, length, userData);
+
+        // don't parse anything in case we have a header or comment as first element
+        // for this reason we need to skip all spaces
+
+        if (!kLookupSkipTag[buffer[_firstStartTagIndex + 1]])
+        {
+            // TODO(anh): add pugixml
+            // pugi::xml_parse_status result = pugi_doc_.load_buffer_inplace(buffer, length).status;
+
+            // if (result != pugi::status_ok)
+            //     return false;
+
+            // element_handler_(userData, pugi_doc_, strip_invalid_utf8_);
+        }
+
+        _lastStartTagIndex = -1;
+        _firstStartTagIndex = -1;
+        assert(_nestedLevel == 0);
+        return true;
+    }
+
+    void reset(bool cleanup)
+    {
+        if (cleanup)
+        {
+            _buffer.Clear();
+            _buffer.Resize(kDefaultBufferSize);
+        }
+        _nestedLevel = -1;
+        _processRoot = true;
+        _lastStartTagIndex = -1;
+        _firstStartTagIndex = -1;
+    }
+
 private:
     SAXParser *_saxParserImpl;
     xsxml::string_view _curEleName;
     std::vector<const char *> _curEleAttrs;
     std::vector<const char *> _xmlDeclAttrs;
     xsxml::xml_sax3_parse_cb _sax3Handler;
+
+    size_t _firstStartTagIndex;
+    size_t _lastStartTagIndex;
+    size_t _nestedLevel;
+    size_t _maxStanzaBytes;
+    bool _processRoot;
+    std::string _rootName;
+
+    ByteBuffer _buffer;
 };
 
 SAXParser::SAXParser() { _delegator = nullptr; }
