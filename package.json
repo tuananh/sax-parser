@@ -32,7 +32,7 @@
   "license": "MIT",
   "dependencies": {
     "bindings": "^1.5.0",
-    "node-addon-api": "^3.0.0"
+    "node-addon-api": "^5.0.0"
   },
   "devDependencies": {
     "benchmark": "^2.1.4",
