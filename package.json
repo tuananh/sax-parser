@@ -39,7 +39,7 @@
     "husky": "^8.0.1",
     "jest": "^26.0.1",
     "libxmljs": "^0.19.7",
-    "lint-staged": "^10.2.7",
+    "lint-staged": "^13.0.3",
     "ltx": "^3.0.0",
     "node-expat": "^2.3.18",
     "node-gyp": "^9.1.0",
