@@ -4,7 +4,7 @@
   "description": "An extremely fast SAX parser for Node.js, written in C++.",
   "main": "index.js",
   "scripts": {
-    "test": "node --expose-gc ./node_modules/.bin/jest",
+    "test": "cross-env NODE_OPTIONS=\"--expose-gc\" jest",
     "build": "node-gyp rebuild",
     "install": "node-gyp rebuild",
     "benchmark": "node benchmark",
@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "benchmark": "^2.1.4",
+    "cross-env": "^10.1.0",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
     "lint-staged": "^17.0.8",
