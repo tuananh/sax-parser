@@ -35,6 +35,8 @@ namespace saxparser
 {
 typedef unsigned char XML_CHAR;
 
+class SAX2Hander;
+
 class SAXDelegator
 {
 public:
@@ -62,13 +64,10 @@ class SAXParser
     SAXDelegator *_delegator;
 
     std::string _buffer;
-    bool _processRoot;
     bool _documentStarted;
     bool _documentEnded;
     bool _suppressDocumentEvents;
-    int _nestedLevel;
-    ptrdiff_t _firstStartTagIndex;
-    ptrdiff_t _lastStartTagIndex;
+    SAX2Hander *_saxHandler;
 
 public:
     SAXParser();
@@ -98,17 +97,7 @@ public:
     static void piHandler(void *ctx, const XML_CHAR *target, size_t, const XML_CHAR *instruction, size_t);
 
 private:
-    enum FeedResult
-    {
-        kFeedOk = 0,
-        kFeedInvalidXml,
-    };
-
     void resetStreamState();
-    ptrdiff_t findStanzaUpperLimit(const char *ptr, size_t start, size_t end);
-    bool processRootElement(char *buffer, size_t length);
-    bool pushStanza(char *buffer, size_t length);
-    FeedResult processBuffer(size_t start, size_t end, bool flush);
     bool parseStanza(char *xmlData, size_t dataLength, bool isRoot);
 };
 
