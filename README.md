@@ -1,6 +1,6 @@
 sax-parser
 [![npm version](https://badgen.net/npm/v/@tuananh/sax-parser)](https://npmjs.com/package/@tuananh/sax-parser)
-[![github actions ci](https://github.com/tuananh/sax-parser/actions/workflows/nodejs.yaml/badge.svg)](https://github.com/tuananh/sax-parser/actions)
+[![github actions ci](https://github.com/tuananh/sax-parser/actions/workflows/ci.yml/badge.svg)](https://github.com/tuananh/sax-parser/actions)
 ![license](https://badgen.net/npm/license/@tuananh/sax-parser)
 ==========
 
