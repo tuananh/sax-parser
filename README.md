@@ -15,7 +15,7 @@ A very fast SAX parser for Node.js written in C++. Native module for performance
 ## Installation
 
 ```sh
-yarn add @tuananh/sax-parser
+pnpm install @tuananh/sax-parser
 # npm install @tuananh/sax-parser
 ```
 
