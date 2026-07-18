@@ -1,7 +1,6 @@
 sax-parser
 [![npm version](https://badgen.net/npm/v/@tuananh/sax-parser)](https://npmjs.com/package/@tuananh/sax-parser)
-[![github actions ci](https://github.com/tuananh/sax-parser/workflows/CI/badge.svg)](https://github.com/tuananh/sax-parser/actions)
-[![travis ci](https://api.travis-ci.org/tuananh/sax-parser.svg?branch=develop)](https://travis-ci.org/github/tuananh/sax-parser)
+[![github actions ci](https://github.com/tuananh/sax-parser/actions/workflows/nodejs.yaml/badge.svg)](https://github.com/tuananh/sax-parser/actions)
 ![license](https://badgen.net/npm/license/@tuananh/sax-parser)
 ==========
 
@@ -22,26 +21,25 @@ yarn add @tuananh/sax-parser
 
 ## Benchmark
 
-I use the `benchmark.js` script from [node-expat repo](https://github.com/astro/node-expat/blob/master/benchmark.js) and add few more alternatives for comparison.
-
-`ltx` package is fastest, win by almost 2 (~1.8) order of magnitude compare with the second fastest (`@tuananh/sax-parser`). However, `ltx` is not fully compliant with XML spec. I still include `ltx` here for reference. If `ltx` works for you, use it.
-
-The benchmark generates ~1 MB of XML in memory (repeated `<item>` elements) and compares parsers on that payload.
+[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document (158 `<item>` elements, generated in memory). Each parser runs a full-document parse with **no event handlers** registered — measuring raw parse throughput only.
 
 ```sh
 npm run benchmark
 ```
 
+Results on Node.js v26.1.0, Linux x64:
+
 | module              | ops/sec | native | XML compliant | stream |
 | ------------------- | ------- | ------ | ------------- | ------ |
-| node-xml            | 4,335   | ☐      | ✘             | ✘      |
-| libxmljs            | 8,927   | ✘      | ✘             | ☐      |
-| node-expat          | 13,028  | ✘      | ✘             | ✘      |
-| sax                 | 14,277  | ☐      | ✘             | ✘      |
-| @tuananh/sax-parser | 45,779  | ✘      | ✘             | ✘      |
-| ltx                 | 81,722  | ☐      | ☐             | ✘      |
+| @tuananh/sax-parser | 40,703  | ✘      | ✘             | ✘      |
+| ltx                 | 5,557   | ☐      | ☐             | ✘      |
+| sax                 | 1,501   | ☐      | ✘             | ✘      |
+| node-expat          | 1,418   | ✘      | ✘             | ✘      |
+| node-xml            | 674     | ☐      | ✘             | ✘      |
 
 ops/sec: higher is better.
+
+`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` leads this comparison by roughly **7×** over `ltx` and **28×** over `sax`, while also supporting streaming.
 
 ## Usage
 

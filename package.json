@@ -39,12 +39,12 @@
     "husky": "^8.0.1",
     "jest": "^28.1.3",
     "lint-staged": "^13.0.3",
-    "ltx": "^3.0.0",
-    "node-expat": "^2.3.18",
+    "ltx": "^3.1.2",
+    "node-expat": "^2.4.1",
     "node-gyp": "^9.1.0",
     "node-xml": "^1.0.2",
     "prettier": "^2.0.5",
-    "sax": "^1.2.4"
+    "sax": "^1.6.0"
   },
   "gypfile": true,
   "directories": {

@@ -2,9 +2,9 @@
 
 const benchmark = require('benchmark')
 const nodeXml = require('node-xml')
-// const expat = require('node-expat')
+const expat = require('node-expat')
 const sax = require('sax')
-// const LtxSaxParser = require('ltx/lib/ltx')
+const LtxSaxParser = require('ltx/lib/parsers/ltx.js')
 const MySaxParser = require('..')
 
 const TARGET_BYTES = 10 * 1024
@@ -53,28 +53,28 @@ function ThisSaxParser() {
     this.name = '@tuananh/sax-parser'
 }
 
-// function ExpatParser() {
-//     const parser = new expat.Parser()
-//     this.parse = function (s) {
-//         parser.parse(s, false)
-//     }
-//     this.name = 'node-expat'
-// }
+function ExpatParser() {
+    const parser = new expat.Parser()
+    this.parse = function (s) {
+        parser.parse(s, false)
+    }
+    this.name = 'node-expat'
+}
 
-// function LtxParser() {
-//     var parser = new LtxSaxParser()
-//     this.parse = function (s) {
-//         parser.write(s)
-//     }
-//     this.name = 'ltx'
-// }
+function LtxParser() {
+    var parser = new LtxSaxParser()
+    this.parse = function (s) {
+        parser.write(s)
+    }
+    this.name = 'ltx'
+}
 
 const parsers = [
     SaxParser,
     ThisSaxParser,
     NodeXmlParser,
-    // ExpatParser,
-    // LtxParser,
+    ExpatParser,
+    LtxParser,
 ].map(function (Parser) {
     return new Parser()
 })
