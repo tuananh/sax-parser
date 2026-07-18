@@ -133,7 +133,9 @@ jobs:
               run: node scripts/prepublish.js
 
             - name: Publish root package
-              run: npm publish --access public --ignore-scripts
+              run: |
+                  TAG=$(node -e "console.log(require('./scripts/publish-tag').getPublishTag(require('./package.json').version))")
+                  npm publish --access public --ignore-scripts --tag "$TAG"
 
             - name: Create GitHub Release
               if: github.event_name == 'push'

@@ -4,12 +4,14 @@ const fs = require('fs')
 const path = require('path')
 const { execSync } = require('child_process')
 const { targets, getBinaryFileName } = require('./prebuild-targets')
+const { getPublishTag } = require('./publish-tag')
 
 const rootDir = path.join(__dirname, '..')
 const npmDir = path.join(rootDir, 'npm')
 const rootPkgPath = path.join(rootDir, 'package.json')
 const rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, 'utf8'))
 const version = rootPkg.version
+const publishTag = getPublishTag(version)
 const optionalDependencies = {}
 
 for (const target of targets) {
@@ -35,8 +37,8 @@ for (const target of targets) {
     const pkgName = `@tuananh/sax-parser-${target.id}`
     optionalDependencies[pkgName] = version
 
-    console.log(`Publishing ${pkgName}@${version}`)
-    execSync('npm publish --access public', {
+    console.log(`Publishing ${pkgName}@${version} with tag ${publishTag}`)
+    execSync(`npm publish --access public --tag ${publishTag}`, {
         cwd: pkgDir,
         stdio: 'inherit',
     })
