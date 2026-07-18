@@ -26,16 +26,10 @@ I use the `benchmark.js` script from [node-expat repo](https://github.com/astro/
 
 `ltx` package is fastest, win by almost 2 (~1.8) order of magnitude compare with the second fastest (`@tuananh/sax-parser`). However, `ltx` is not fully compliant with XML spec. I still include `ltx` here for reference. If `ltx` works for you, use it.
 
+The benchmark generates ~1 MB of XML in memory (repeated `<item>` elements) and compares parsers on that payload.
+
 ```sh
 npm run benchmark
-
-sax x 14,277 ops/sec ±0.73% (87 runs sampled)
-@tuananh/sax-parser x 45,779 ops/sec ±0.85% (85 runs sampled)
-node-xml x 4,335 ops/sec ±0.51% (86 runs sampled)
-node-expat x 13,028 ops/sec ±0.39% (88 runs sampled)
-ltx x 81,722 ops/sec ±0.73% (89 runs sampled)
-libxmljs x 8,927 ops/sec ±1.02% (88 runs sampled)
-Fastest is ltx
 ```
 
 | module              | ops/sec | native | XML compliant | stream |
@@ -58,15 +52,16 @@ ops/sec: higher is better.
 Sample usage
 
 ```js
-const fs = require('fs')
-const path = require('path')
-const SaxParser = require('..')
+const { Readable } = require('stream')
+const SaxParser = require('@tuananh/sax-parser')
 
 const parser = new SaxParser()
+const xml = '<hello><item id="1"><name>foo</name></item></hello>'
 
-const readStream = fs.createReadStream(
-    path.join(__dirname, '/../benchmark/test.xml')
-)
+const readStream = new Readable()
+readStream._read = () => {}
+readStream.push(xml)
+readStream.push(null)
 
 readStream
     .pipe(parser)

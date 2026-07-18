@@ -1,13 +1,33 @@
 'use strict'
 
-const { readFileSync } = require('fs')
 const benchmark = require('benchmark')
 const nodeXml = require('node-xml')
 const expat = require('node-expat')
 const sax = require('sax')
 // const LtxSaxParser = require('ltx/lib/parsers/ltx')
 const MySaxParser = require('..')
-const xml = readFileSync(__dirname + '/test.xml', 'utf-8')
+
+const TARGET_BYTES = 1024 * 1024
+
+function generateXml(targetBytes) {
+    const parts = ['<root>']
+    let size = Buffer.byteLength(parts[0], 'utf8')
+    let i = 0
+
+    while (size < targetBytes - Buffer.byteLength('</root>', 'utf8')) {
+        const item = `<item id="${i}"><name>item-${i}</name><value>value-${i}</value></item>`
+        parts.push(item)
+        size += Buffer.byteLength(item, 'utf8')
+        i++
+    }
+
+    parts.push('</root>')
+    return parts.join('')
+}
+
+const xml = generateXml(TARGET_BYTES)
+const xmlSizeKb = (Buffer.byteLength(xml, 'utf8') / 1024).toFixed(1)
+console.log(`Generated XML: ${xmlSizeKb} KB (${xml.match(/<item /g).length} items)\n`)
 
 function NodeXmlParser() {
     const parser = new nodeXml.SaxParser(function (cb) {})

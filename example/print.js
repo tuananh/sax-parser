@@ -1,4 +1,3 @@
-const { readFileSync } = require('fs')
 const SaxParser = require('..')
 
 const parser = new SaxParser()
@@ -89,5 +88,5 @@ parser.on('processingInstruction', (pi) => {
     process.write(`<?${pi.target} ${pi.instruction}?>`)
 })
 
-const xml = readFileSync(__dirname + '/../benchmark/test.xml', 'utf-8')
+const xml = '<hello><item id="1"><name>Belgian Waffles</name><price>$5.95</price></item></hello>'
 parser.parse(xml)
