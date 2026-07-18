@@ -81,7 +81,6 @@ You will need to have all `node-gyp`'s requirements installed.
 ```sh
 git clone git@github.com:tuananh/sax-parser.git
 cd sax-parser
-git submodule init
 npm install
 npm run build
 node example/print.js
