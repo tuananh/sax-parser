@@ -31,13 +31,13 @@ Results on Node.js v26.5.0, Linux x64:
 
 | module              | ops/sec | native | XML compliant | stream |
 | ------------------- | ------- | ------ | ------------- | ------ |
-| @tuananh/sax-parser | 63,741  | ✘      | ✘             | ✘      |
-| easysax             | 12,319  | ☐      | ✘             | ✘      |
-| saxophone           | 9,311   | ☐      | ✘             | ✘      |
-| ltx                 | 4,117   | ☐      | ☐             | ✘      |
-| sax                 | 1,580   | ☐      | ✘             | ✘      |
-| node-expat          | 1,357   | ✘      | ✘             | ✘      |
-| node-xml            | 764     | ☐      | ✘             | ✘      |
+| @tuananh/sax-parser | 63,741  | ✅     | ✅            | ✅     |
+| easysax             | 12,319  | ❌     | ✅            | ✅     |
+| saxophone           | 9,311   | ❌     | ✅            | ✅     |
+| ltx                 | 4,117   | ❌     | ❌            | ✅     |
+| sax                 | 1,580   | ❌     | ✅            | ✅     |
+| node-expat          | 1,357   | ✅     | ✅            | ✅     |
+| node-xml            | 764     | ❌     | ✅            | ✅     |
 
 ops/sec: higher is better.
 
