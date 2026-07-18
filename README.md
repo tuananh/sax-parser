@@ -21,7 +21,7 @@ yarn add @tuananh/sax-parser
 
 ## Benchmark
 
-[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document (158 `<item>` elements, generated in memory). Each parser runs a full-document parse with **no event handlers** registered — measuring raw parse throughput only.
+[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document. Each parser runs a full-document parse with **no event handlers** registered — measuring raw parse throughput only.
 
 ```sh
 npm run benchmark

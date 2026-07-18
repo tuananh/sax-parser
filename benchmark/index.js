@@ -27,7 +27,9 @@ function generateXml(targetBytes) {
 
 const xml = generateXml(TARGET_BYTES)
 const xmlSizeKb = (Buffer.byteLength(xml, 'utf8') / 1024).toFixed(1)
-console.log(`Generated XML: ${xmlSizeKb} KB (${xml.match(/<item /g).length} items)`)
+console.log(
+    `Generated XML: ${xmlSizeKb} KB (${xml.match(/<item /g).length} items)`
+)
 
 function NodeXmlParser() {
     const parser = new nodeXml.SaxParser(function (cb) {})
