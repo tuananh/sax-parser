@@ -21,25 +21,27 @@ yarn add @tuananh/sax-parser
 
 ## Benchmark
 
-[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document. Each parser runs a full-document parse with **no event handlers** registered — measuring raw parse throughput only.
+[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document. Each parser runs a full-document parse with **no event handlers** registered, measuring raw parse throughput only.
 
 ```sh
 npm run benchmark
 ```
 
-Results on Node.js v26.1.0, Linux x64:
+Results on Node.js v26.5.0, Linux x64:
 
 | module              | ops/sec | native | XML compliant | stream |
 | ------------------- | ------- | ------ | ------------- | ------ |
-| @tuananh/sax-parser | 59,893  | ✘      | ✘             | ✘      |
-| ltx                 | 4,357   | ☐      | ☐             | ✘      |
-| sax                 | 1,599   | ☐      | ✘             | ✘      |
-| node-expat          | 1,355   | ✘      | ✘             | ✘      |
-| node-xml            | 760     | ☐      | ✘             | ✘      |
+| @tuananh/sax-parser | 63,741  | ✘      | ✘             | ✘      |
+| easysax             | 12,319  | ☐      | ✘             | ✘      |
+| saxophone           | 9,311   | ☐      | ✘             | ✘      |
+| ltx                 | 4,117   | ☐      | ☐             | ✘      |
+| sax                 | 1,580   | ☐      | ✘             | ✘      |
+| node-expat          | 1,357   | ✘      | ✘             | ✘      |
+| node-xml            | 764     | ☐      | ✘             | ✘      |
 
 ops/sec: higher is better.
 
-`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` leads this comparison by roughly **14×** over `ltx` and **37×** over `sax`, while also supporting streaming.
+`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` leads this comparison by roughly **15×** over `ltx` and **40×** over `sax`, while also supporting streaming.
 
 ## Usage
 

@@ -4,6 +4,8 @@ const benchmark = require('benchmark')
 const nodeXml = require('node-xml')
 const expat = require('node-expat')
 const sax = require('sax')
+const Saxophone = require('saxophone')
+const EasySAXParser = require('easysax')
 const LtxSaxParser = require('ltx/lib/parsers/ltx.js')
 const MySaxParser = require('..')
 
@@ -71,12 +73,30 @@ function LtxParser() {
     this.name = 'ltx'
 }
 
+function SaxophoneParser() {
+    const parser = new Saxophone()
+    this.parse = function (s) {
+        parser.parse(s)
+    }
+    this.name = 'saxophone'
+}
+
+function EasysaxParser() {
+    const parser = new EasySAXParser()
+    this.parse = function (s) {
+        parser.parse(s)
+    }
+    this.name = 'easysax'
+}
+
 const parsers = [
     SaxParser,
     ThisSaxParser,
     NodeXmlParser,
     ExpatParser,
     LtxParser,
+    SaxophoneParser,
+    EasysaxParser,
 ].map(function (Parser) {
     return new Parser()
 })
