@@ -4,7 +4,7 @@ const SaxParser = require('..')
 
 describe('stream test', () => {
     // ref: see https://github.com/tuananh/sax-parser/issues/10
-    test.skip('should be able to parse incomplete stanza in each chunk but complete XML overall', async () => {
+    test('should be able to parse incomplete stanza in each chunk but complete XML overall', async () => {
         expect(() => {
             const parser = new SaxParser()
             const s = new Readable()

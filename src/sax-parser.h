@@ -25,6 +25,8 @@
 #ifndef __SAXPARSER_H__
 #define __SAXPARSER_H__
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
 #include "../vendor/xsxml/xsxml/no-recursive/xsxml.hpp"
@@ -59,12 +61,22 @@ class SAXParser
 {
     SAXDelegator *_delegator;
 
+    std::string _buffer;
+    bool _processRoot;
+    bool _documentStarted;
+    bool _documentEnded;
+    bool _suppressDocumentEvents;
+    int _nestedLevel;
+    ptrdiff_t _firstStartTagIndex;
+    ptrdiff_t _lastStartTagIndex;
+
 public:
     SAXParser();
     ~SAXParser();
     bool init(const char *encoding);
     bool parse(const char *xmlData, size_t dataLength);
     bool parseIntrusive(char *xmlData, size_t dataLength);
+    bool feed(const char *xmlData, size_t dataLength, bool flush);
 
     void setDelegator(SAXDelegator *delegator);
     static void startElement(void *ctx, const XML_CHAR *name,
@@ -84,6 +96,20 @@ public:
     static void endDeclAttr(void *ctx);
     static void xmlDeclarationHandler(void *ctx, const XML_CHAR **attrs);
     static void piHandler(void *ctx, const XML_CHAR *target, size_t, const XML_CHAR *instruction, size_t);
+
+private:
+    enum FeedResult
+    {
+        kFeedOk = 0,
+        kFeedInvalidXml,
+    };
+
+    void resetStreamState();
+    ptrdiff_t findStanzaUpperLimit(const char *ptr, size_t start, size_t end);
+    bool processRootElement(char *buffer, size_t length);
+    bool pushStanza(char *buffer, size_t length);
+    FeedResult processBuffer(size_t start, size_t end, bool flush);
+    bool parseStanza(char *xmlData, size_t dataLength, bool isRoot);
 };
 
 } // namespace saxparser
