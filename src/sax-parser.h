@@ -67,17 +67,26 @@ class SAXParser
     bool _documentStarted;
     bool _documentEnded;
     bool _suppressDocumentEvents;
+    bool _emitPerAttributeEvents;
+    bool _emitEndAttributeEvent;
+    bool _emitEvents;
     SAX2Hander *_saxHandler;
+    std::string _parseBuffer;
 
 public:
     SAXParser();
     ~SAXParser();
     bool init(const char *encoding);
     bool parse(const char *xmlData, size_t dataLength);
+    bool parseMutable(char *xmlData, size_t dataLength);
     bool parseIntrusive(char *xmlData, size_t dataLength);
     bool feed(const char *xmlData, size_t dataLength, bool flush);
 
     void setDelegator(SAXDelegator *delegator);
+    void setEmitPerAttributeEvents(bool emitAttributes, bool emitEndAttribute);
+    void setEmitEvents(bool emitEvents);
+    bool emitPerAttributeEvents() const { return _emitPerAttributeEvents; }
+    bool emitEndAttributeEvent() const { return _emitEndAttributeEvent; }
     static void startElement(void *ctx, const XML_CHAR *name,
                              const XML_CHAR **atts);
     static void endElement(void *ctx, const XML_CHAR *name, size_t len);

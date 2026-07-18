@@ -9,6 +9,8 @@ public:
     explicit MySAXDelegator(Napi::ObjectReference jsThis);
     ~MySAXDelegator();
 
+    void beginParse(saxparser::SAXParser *parser);
+
     void startElement(void *ctx, const char *name, const char **attrs) override;
     void endElement(void *ctx, const char *name, size_t len) override;
     void startAttribute(void *ctx, const char *name, size_t nameLen,
@@ -28,12 +30,33 @@ public:
 
 private:
     Napi::ObjectReference _jsThis;
+    Napi::FunctionReference _emit;
+    bool _hasAnyListeners;
+    bool _hasStartElement;
+    bool _hasEndElement;
+    bool _hasStartAttribute;
+    bool _hasEndAttribute;
+    bool _hasText;
+    bool _hasCdata;
+    bool _hasComment;
+    bool _hasStartDocument;
+    bool _hasEndDocument;
+    bool _hasEnd;
+    bool _hasFinish;
+    bool _hasDone;
+    bool _hasDoctype;
+    bool _hasError;
+    bool _hasStartXmlDeclAttr;
+    bool _hasEndXmlDeclAttr;
+    bool _hasXmlDecl;
+    bool _hasProcessingInstruction;
 
-    Napi::Function getEmit();
-    void emitEvent(std::string eventName);
-    void emitEvent(std::string eventName, std::string data);
-    void emitEvent(std::string eventName, Napi::Object obj);
-    void emitEvent(std::string eventName, std::string name, Napi::Object obj);
+    void refreshListenerFlags();
+
+    void emitEvent(const char *eventName);
+    void emitEvent(const char *eventName, const char *data, size_t len);
+    void emitEvent(const char *eventName, Napi::Object obj);
+    void emitEvent(const char *eventName, const char *name, Napi::Object obj);
 };
 
 class SaxParser : public Napi::ObjectWrap<SaxParser>

@@ -34,8 +34,11 @@ public:
                                        const char *value, size_t valueLen) {
             _curEleAttrs.push_back(name);
             _curEleAttrs.push_back(value);
-            SAXParser::startAttribute(_saxParserImpl, (const XML_CHAR *)name, nameLen,
-                                      (const XML_CHAR *)value, valueLen);
+            if (_saxParserImpl->emitPerAttributeEvents())
+            {
+                SAXParser::startAttribute(_saxParserImpl, (const XML_CHAR *)name, nameLen,
+                                          (const XML_CHAR *)value, valueLen);
+            }
         };
         _sax3Handler.xml_end_attr_cb = [=]() {
             if (!_curEleAttrs.empty())
@@ -55,7 +58,8 @@ public:
                                         (const XML_CHAR **)attrs);
             }
 
-            SAXParser::endAttribute(_saxParserImpl);
+            if (_saxParserImpl->emitEndAttributeEvent())
+                SAXParser::endAttribute(_saxParserImpl);
         };
         _sax3Handler.xml_end_element_cb = [=](const char *name, size_t len) {
             SAXParser::endElement(_saxParserImpl, (const XML_CHAR *)name, len);
@@ -124,6 +128,9 @@ SAXParser::SAXParser()
       _documentStarted(false),
       _documentEnded(false),
       _suppressDocumentEvents(false),
+      _emitPerAttributeEvents(false),
+      _emitEndAttributeEvent(false),
+      _emitEvents(true),
       _saxHandler(new SAX2Hander())
 {
     _saxHandler->setSAXParserImp(this);
@@ -149,13 +156,21 @@ void SAXParser::resetStreamState()
 
 bool SAXParser::parse(const char *xmlData, size_t dataLength)
 {
+    if (xmlData == nullptr || dataLength == 0)
+        return false;
+
+    _parseBuffer.assign(xmlData, dataLength);
+    return parseMutable(&_parseBuffer.front(), _parseBuffer.size());
+}
+
+bool SAXParser::parseMutable(char *xmlData, size_t dataLength)
+{
     resetStreamState();
 
     if (xmlData == nullptr || dataLength == 0)
         return false;
 
-    std::string mutableData(xmlData, dataLength);
-    return parseIntrusive(&mutableData.front(), dataLength);
+    return parseIntrusive(xmlData, dataLength);
 }
 
 bool SAXParser::feed(const char *xmlData, size_t dataLength, bool flush)
@@ -209,40 +224,66 @@ bool SAXParser::parseIntrusive(char *xmlData, size_t dataLength)
 void SAXParser::startElement(void *ctx, const XML_CHAR *name,
                              const XML_CHAR **attrs)
 {
-    ((SAXParser *)(ctx))
-        ->_delegator->startElement(ctx, (char *)name, (const char **)attrs);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->startElement(ctx, (char *)name, (const char **)attrs);
 }
 void SAXParser::endElement(void *ctx, const XML_CHAR *name, size_t len)
 {
-    ((SAXParser *)(ctx))->_delegator->endElement(ctx, (char *)name, len);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->endElement(ctx, (char *)name, len);
 }
 void SAXParser::textHandler(void *ctx, const XML_CHAR *text, size_t len)
 {
-    ((SAXParser *)(ctx))->_delegator->textHandler(ctx, (char *)text, len);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->textHandler(ctx, (char *)text, len);
 }
 void SAXParser::startAttribute(void *ctx, const XML_CHAR *name, size_t nameLen,
                                const XML_CHAR *value, size_t valueLen)
 {
-    ((SAXParser *)(ctx))
-        ->_delegator->startAttribute(ctx, (char *)name, nameLen, (char *)value,
-                                     valueLen);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->startAttribute(ctx, (char *)name, nameLen, (char *)value,
+                                         valueLen);
 }
 void SAXParser::endAttribute(void *ctx)
 {
-    ((SAXParser *)(ctx))->_delegator->endAttribute(ctx);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->endAttribute(ctx);
 }
 void SAXParser::cdataHandler(void *ctx, const XML_CHAR *cdata, size_t len)
 {
-    ((SAXParser *)(ctx))->_delegator->cdataHandler(ctx, (char *)cdata, len);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->cdataHandler(ctx, (char *)cdata, len);
 }
 void SAXParser::commentHandler(void *ctx, const XML_CHAR *comment, size_t len)
 {
-    ((SAXParser *)(ctx))->_delegator->commentHandler(ctx, (char *)comment, len);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->commentHandler(ctx, (char *)comment, len);
 }
 void SAXParser::startDocument(void *ctx)
 {
     SAXParser *parser = (SAXParser *)ctx;
-    if (parser->_suppressDocumentEvents)
+    if (parser->_suppressDocumentEvents || !parser->_emitEvents || parser->_delegator == nullptr)
         return;
 
     if (!parser->_documentStarted)
@@ -254,7 +295,8 @@ void SAXParser::startDocument(void *ctx)
 void SAXParser::endDocument(void *ctx)
 {
     SAXParser *parser = (SAXParser *)ctx;
-    if (parser->_suppressDocumentEvents || parser->_documentEnded)
+    if (parser->_suppressDocumentEvents || parser->_documentEnded || !parser->_emitEvents ||
+        parser->_delegator == nullptr)
         return;
 
     parser->_documentEnded = true;
@@ -262,32 +304,67 @@ void SAXParser::endDocument(void *ctx)
 }
 void SAXParser::doctypeHandler(void *ctx, const XML_CHAR *doctype, size_t len)
 {
-    ((SAXParser *)(ctx))->_delegator->doctypeHandler(ctx, (char *)doctype, len);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->doctypeHandler(ctx, (char *)doctype, len);
 }
 void SAXParser::errorHandler(void *ctx, xsxml::xml_parse_status s,
                              char *offset)
 {
-    ((SAXParser *)(ctx))->_delegator->errorHandler(ctx, s, offset);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->errorHandler(ctx, s, offset);
 }
 void SAXParser::startDeclAttr(void *ctx, const XML_CHAR *name, size_t nameLen, const XML_CHAR *value, size_t valueLen)
 {
-    ((SAXParser *)(ctx))->_delegator->startDeclAttr(ctx, (char *)name, nameLen, (char *)value, valueLen);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->startDeclAttr(ctx, (char *)name, nameLen, (char *)value, valueLen);
 }
 void SAXParser::endDeclAttr(void *ctx)
 {
-    ((SAXParser *)(ctx))->_delegator->endDeclAttr(ctx);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->endDeclAttr(ctx);
 }
 void SAXParser::xmlDeclarationHandler(void *ctx, const XML_CHAR **attrs)
 {
-    ((SAXParser *)(ctx))->_delegator->xmlDeclarationHandler(ctx, (const char **)attrs);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->xmlDeclarationHandler(ctx, (const char **)attrs);
 }
 void SAXParser::piHandler(void *ctx, const XML_CHAR *target, size_t targetLen, const XML_CHAR *instruction, size_t instructionLen)
 {
-    ((SAXParser *)(ctx))->_delegator->piHandler(ctx, (char *)target, targetLen, (char *)instruction, instructionLen);
+    SAXParser *parser = (SAXParser *)ctx;
+    if (!parser->_emitEvents || parser->_delegator == nullptr)
+        return;
+
+    parser->_delegator->piHandler(ctx, (char *)target, targetLen, (char *)instruction, instructionLen);
 }
 void SAXParser::setDelegator(SAXDelegator *delegator)
 {
     _delegator = delegator;
+}
+
+void SAXParser::setEmitPerAttributeEvents(bool emitAttributes, bool emitEndAttribute)
+{
+    _emitPerAttributeEvents = emitAttributes;
+    _emitEndAttributeEvent = emitEndAttribute;
+}
+
+void SAXParser::setEmitEvents(bool emitEvents)
+{
+    _emitEvents = emitEvents;
 }
 
 } // namespace saxparser

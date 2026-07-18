@@ -7,7 +7,7 @@ const sax = require('sax')
 // const LtxSaxParser = require('ltx/lib/parsers/ltx')
 const MySaxParser = require('..')
 
-const TARGET_BYTES = 1024 * 1024
+const TARGET_BYTES = 100 * 1024
 
 function generateXml(targetBytes) {
     const parts = ['<root>']
@@ -27,7 +27,7 @@ function generateXml(targetBytes) {
 
 const xml = generateXml(TARGET_BYTES)
 const xmlSizeKb = (Buffer.byteLength(xml, 'utf8') / 1024).toFixed(1)
-console.log(`Generated XML: ${xmlSizeKb} KB (${xml.match(/<item /g).length} items)\n`)
+console.log(`Generated XML: ${xmlSizeKb} KB (${xml.match(/<item /g).length} items)`)
 
 function NodeXmlParser() {
     const parser = new nodeXml.SaxParser(function (cb) {})

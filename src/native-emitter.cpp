@@ -1,6 +1,5 @@
 #include "native-emitter.h"
 
-#include <iostream>
 #include <string>
 
 #include "sax-parser.h"
@@ -73,26 +72,103 @@ inline std::string ParseStatusToString(xsxml::xml_parse_status s)
     case xsxml::xml_parse_status::status_bad_decl:
         return "ERR_BAD_XML_DECLARATION";
     case xsxml::xml_parse_status::status_ok:
-        return "OK"; // should not get here
+        return "OK";
     default:
         return "ERR_UNKNOWN";
     }
 }
 
 MySAXDelegator::MySAXDelegator(Napi::ObjectReference jsThis)
-    : _jsThis(std::move(jsThis))
+    : _jsThis(std::move(jsThis)),
+      _hasAnyListeners(false),
+      _hasStartElement(false),
+      _hasEndElement(false),
+      _hasStartAttribute(false),
+      _hasEndAttribute(false),
+      _hasText(false),
+      _hasCdata(false),
+      _hasComment(false),
+      _hasStartDocument(false),
+      _hasEndDocument(false),
+      _hasEnd(false),
+      _hasFinish(false),
+      _hasDone(false),
+      _hasDoctype(false),
+      _hasError(false),
+      _hasStartXmlDeclAttr(false),
+      _hasEndXmlDeclAttr(false),
+      _hasXmlDecl(false),
+      _hasProcessingInstruction(false)
 {
 }
 
 MySAXDelegator::~MySAXDelegator() {}
 
-Napi::Function MySAXDelegator::getEmit()
+void MySAXDelegator::refreshListenerFlags()
 {
-    return _jsThis.Get("emit").As<Napi::Function>();
+    Napi::Value events = _jsThis.Get("_events");
+    _hasAnyListeners = !(events.IsUndefined() || events.IsNull());
+
+    _hasStartElement = false;
+    _hasEndElement = false;
+    _hasStartAttribute = false;
+    _hasEndAttribute = false;
+    _hasText = false;
+    _hasCdata = false;
+    _hasComment = false;
+    _hasStartDocument = false;
+    _hasEndDocument = false;
+    _hasEnd = false;
+    _hasFinish = false;
+    _hasDone = false;
+    _hasDoctype = false;
+    _hasError = false;
+    _hasStartXmlDeclAttr = false;
+    _hasEndXmlDeclAttr = false;
+    _hasXmlDecl = false;
+    _hasProcessingInstruction = false;
+
+    if (!_hasAnyListeners || !events.IsObject())
+        return;
+
+    Napi::Object listeners = events.As<Napi::Object>();
+    _hasStartElement = listeners.Has("startElement");
+    _hasEndElement = listeners.Has("endElement");
+    _hasStartAttribute = listeners.Has("startAttribute");
+    _hasEndAttribute = listeners.Has("endAttribute");
+    _hasText = listeners.Has("text");
+    _hasCdata = listeners.Has("cdata");
+    _hasComment = listeners.Has("comment");
+    _hasStartDocument = listeners.Has("startDocument");
+    _hasEndDocument = listeners.Has("endDocument");
+    _hasEnd = listeners.Has("end");
+    _hasFinish = listeners.Has("finish");
+    _hasDone = listeners.Has("done");
+    _hasDoctype = listeners.Has("doctype");
+    _hasError = listeners.Has("error");
+    _hasStartXmlDeclAttr = listeners.Has("startXmlDeclAttr");
+    _hasEndXmlDeclAttr = listeners.Has("endXmlDeclAttr");
+    _hasXmlDecl = listeners.Has("xmlDecl");
+    _hasProcessingInstruction = listeners.Has("processingInstruction");
+}
+
+void MySAXDelegator::beginParse(SAXParser *parser)
+{
+    refreshListenerFlags();
+    parser->setEmitEvents(_hasAnyListeners);
+    parser->setEmitPerAttributeEvents(_hasStartAttribute, _hasEndAttribute);
+
+    if (_hasAnyListeners && !_emit)
+    {
+        _emit = Napi::Persistent(_jsThis.Get("emit").As<Napi::Function>());
+    }
 }
 
 void MySAXDelegator::startElement(void *ctx, const char *name, const char **atts)
 {
+    if (!_hasStartElement)
+        return;
+
     Napi::Env env = _jsThis.Env();
     Napi::HandleScope scope(env);
 
@@ -104,73 +180,131 @@ void MySAXDelegator::startElement(void *ctx, const char *name, const char **atts
         attribs.Set(attrName, val);
     }
 
-    this->emitEvent("startElement", std::string(name), attribs);
+    this->emitEvent("startElement", name, attribs);
 }
+
 void MySAXDelegator::endElement(void *ctx, const char *name, size_t len)
 {
-    this->emitEvent("endElement", std::string(name, len));
+    if (!_hasEndElement)
+        return;
+
+    this->emitEvent("endElement", name, len);
 }
-void MySAXDelegator::textHandler(void *ctx, const char *s, size_t len)
-{
-    this->emitEvent("text", std::string(s, len));
-}
+
 void MySAXDelegator::startAttribute(void *ctx, const char *name, size_t nameLen,
                                     const char *value, size_t valueLen)
 {
+    if (!_hasStartAttribute)
+        return;
+
     Napi::Env env = _jsThis.Env();
     Napi::HandleScope scope(env);
 
     Napi::Object attrib = Napi::Object::New(env);
-    attrib.Set(std::string(name, nameLen), std::string(value, valueLen));
+    attrib.Set(Napi::String::New(env, name, nameLen), Napi::String::New(env, value, valueLen));
     this->emitEvent("startAttribute", attrib);
 }
-void MySAXDelegator::endAttribute(void *ctx) { this->emitEvent("endAttribute"); }
+
+void MySAXDelegator::endAttribute(void *ctx)
+{
+    if (!_hasEndAttribute)
+        return;
+
+    this->emitEvent("endAttribute");
+}
+
+void MySAXDelegator::textHandler(void *ctx, const char *s, size_t len)
+{
+    if (!_hasText)
+        return;
+
+    this->emitEvent("text", s, len);
+}
+
 void MySAXDelegator::cdataHandler(void *ctx, const char *s, size_t len)
 {
-    this->emitEvent("cdata", std::string(s, len));
+    if (!_hasCdata)
+        return;
+
+    this->emitEvent("cdata", s, len);
 }
+
 void MySAXDelegator::commentHandler(void *ctx, const char *s, size_t len)
 {
-    this->emitEvent("comment", std::string(s, len));
+    if (!_hasComment)
+        return;
+
+    this->emitEvent("comment", s, len);
 }
-void MySAXDelegator::startDocument(void *ctx) { this->emitEvent("startDocument"); }
+
+void MySAXDelegator::startDocument(void *ctx)
+{
+    if (!_hasStartDocument)
+        return;
+
+    this->emitEvent("startDocument");
+}
+
 void MySAXDelegator::endDocument(void *ctx)
 {
-    this->emitEvent("endDocument");
-    // alias. use whatever suits you.
-    this->emitEvent("end");
-    this->emitEvent("finish");
-    this->emitEvent("done");
+    if (_hasEndDocument)
+        this->emitEvent("endDocument");
+    if (_hasEnd)
+        this->emitEvent("end");
+    if (_hasFinish)
+        this->emitEvent("finish");
+    if (_hasDone)
+        this->emitEvent("done");
 }
+
 void MySAXDelegator::doctypeHandler(void *ctx, const char *doctype, size_t len)
 {
-    this->emitEvent("doctype", std::string(doctype, len));
+    if (!_hasDoctype)
+        return;
+
+    this->emitEvent("doctype", doctype, len);
 }
+
 void MySAXDelegator::errorHandler(void *ctx, xsxml::xml_parse_status status, char *offset)
 {
+    if (!_hasError)
+        return;
+
     Napi::Env env = _jsThis.Env();
     Napi::HandleScope scope(env);
 
     Napi::Object error = Napi::Object::New(env);
     error.Set("code", ParseStatusToString(status));
-    error.Set("offset", std::string(offset, 10)); // peak 10 chars
+    error.Set("offset", std::string(offset, 10));
     this->emitEvent("error", error);
 }
+
 void MySAXDelegator::startDeclAttr(void *ctx, const char *name, size_t nameLen, const char *value, size_t valueLen)
 {
+    if (!_hasStartXmlDeclAttr)
+        return;
+
     Napi::Env env = _jsThis.Env();
     Napi::HandleScope scope(env);
 
     Napi::Object declAttr = Napi::Object::New(env);
-    declAttr.Set(std::string(name, nameLen), std::string(value, valueLen));
+    declAttr.Set(Napi::String::New(env, name, nameLen), Napi::String::New(env, value, valueLen));
     this->emitEvent("startXmlDeclAttr", declAttr);
 }
+
 void MySAXDelegator::endDeclAttr(void *ctx)
 {
+    if (!_hasEndXmlDeclAttr)
+        return;
+
     this->emitEvent("endXmlDeclAttr");
 }
+
 void MySAXDelegator::xmlDeclarationHandler(void *ctx, const char **attrs)
 {
+    if (!_hasXmlDecl)
+        return;
+
     Napi::Env env = _jsThis.Env();
     Napi::HandleScope scope(env);
 
@@ -184,39 +318,46 @@ void MySAXDelegator::xmlDeclarationHandler(void *ctx, const char **attrs)
 
     this->emitEvent("xmlDecl", attribs);
 }
+
 void MySAXDelegator::piHandler(void *ctx, const char *target, size_t targetLen,
-                               const char *instruction, size_t instructionLen)
+                              const char *instruction, size_t instructionLen)
 {
+    if (!_hasProcessingInstruction)
+        return;
+
     Napi::Env env = _jsThis.Env();
     Napi::HandleScope scope(env);
 
     Napi::Object pi = Napi::Object::New(env);
-    pi.Set("target", std::string(target, targetLen));
-    pi.Set("instruction", std::string(instruction, instructionLen));
+    pi.Set("target", Napi::String::New(env, target, targetLen));
+    pi.Set("instruction", Napi::String::New(env, instruction, instructionLen));
     this->emitEvent("processingInstruction", pi);
 }
 
-void MySAXDelegator::emitEvent(std::string eventName)
+void MySAXDelegator::emitEvent(const char *eventName)
 {
     Napi::Env env = _jsThis.Env();
-    getEmit().Call(_jsThis.Value(), {Napi::String::New(env, eventName)});
+    _emit.Call(_jsThis.Value(), {Napi::String::New(env, eventName)});
 }
-void MySAXDelegator::emitEvent(std::string eventName, std::string data)
+
+void MySAXDelegator::emitEvent(const char *eventName, const char *data, size_t len)
 {
     Napi::Env env = _jsThis.Env();
-    getEmit().Call(_jsThis.Value(), {Napi::String::New(env, eventName),
-                                     Napi::String::New(env, data)});
+    _emit.Call(_jsThis.Value(), {Napi::String::New(env, eventName),
+                                 Napi::String::New(env, data, len)});
 }
-void MySAXDelegator::emitEvent(std::string eventName, Napi::Object obj)
+
+void MySAXDelegator::emitEvent(const char *eventName, Napi::Object obj)
 {
     Napi::Env env = _jsThis.Env();
-    getEmit().Call(_jsThis.Value(), {Napi::String::New(env, eventName), obj});
+    _emit.Call(_jsThis.Value(), {Napi::String::New(env, eventName), obj});
 }
-void MySAXDelegator::emitEvent(std::string eventName, std::string name, Napi::Object obj)
+
+void MySAXDelegator::emitEvent(const char *eventName, const char *name, Napi::Object obj)
 {
     Napi::Env env = _jsThis.Env();
-    getEmit().Call(_jsThis.Value(), {Napi::String::New(env, eventName),
-                                     Napi::String::New(env, name), obj});
+    _emit.Call(_jsThis.Value(), {Napi::String::New(env, eventName),
+                                 Napi::String::New(env, name), obj});
 }
 
 void SaxParser::Parse(const Napi::CallbackInfo &info)
@@ -231,15 +372,17 @@ void SaxParser::Parse(const Napi::CallbackInfo &info)
                                "The parameter must be a string or buffer.");
     }
 
+    _delegator->beginParse(_parser.get());
+
     if (info[0].IsString())
     {
-        std::string input = info[0].As<Napi::String>().Utf8Value();
-        _parser->parse(input.c_str(), input.size());
+        std::string utf8 = info[0].As<Napi::String>().Utf8Value();
+        _parser->parseMutable(&utf8[0], utf8.size());
     }
     else
     {
         Napi::Buffer<char> buffer = info[0].As<Napi::Buffer<char>>();
-        _parser->parse(buffer.Data(), buffer.Length());
+        _parser->parseMutable(buffer.Data(), buffer.Length());
     }
 }
 
@@ -258,6 +401,7 @@ void SaxParser::Feed(const Napi::CallbackInfo &info)
 
     if (info.Length() < 1 || info[0].IsNull() || info[0].IsUndefined())
     {
+        _delegator->beginParse(_parser.get());
         _parser->feed(nullptr, 0, flush);
         return;
     }
@@ -268,10 +412,12 @@ void SaxParser::Feed(const Napi::CallbackInfo &info)
                                "The parameter must be a string or buffer.");
     }
 
+    _delegator->beginParse(_parser.get());
+
     if (info[0].IsString())
     {
-        std::string input = info[0].As<Napi::String>().Utf8Value();
-        _parser->feed(input.c_str(), input.size(), flush);
+        std::string utf8 = info[0].As<Napi::String>().Utf8Value();
+        _parser->feed(utf8.c_str(), utf8.size(), flush);
     }
     else
     {
