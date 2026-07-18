@@ -3,7 +3,7 @@
 const fs = require('fs')
 const path = require('path')
 const { execSync } = require('child_process')
-const { targets } = require('./prebuild-targets')
+const { targets, getBinaryFileName } = require('./prebuild-targets')
 
 const rootDir = path.join(__dirname, '..')
 const npmDir = path.join(rootDir, 'npm')
@@ -13,12 +13,13 @@ const version = rootPkg.version
 const optionalDependencies = {}
 
 for (const target of targets) {
+    const binaryFileName = getBinaryFileName(target.id)
     const pkgDir = path.join(npmDir, target.id)
-    const binaryPath = path.join(pkgDir, 'sax_parser.node')
+    const binaryPath = path.join(pkgDir, binaryFileName)
     const pkgPath = path.join(pkgDir, 'package.json')
 
     if (!fs.existsSync(binaryPath)) {
-        console.warn(`Skipping ${target.id}: sax_parser.node not found`)
+        console.warn(`Skipping ${target.id}: ${binaryFileName} not found`)
         continue
     }
 

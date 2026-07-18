@@ -1,82 +1,98 @@
 'use strict'
 
+const rootPkg = require('../package.json')
+
+if (!rootPkg.napi?.binaryName || !Array.isArray(rootPkg.napi?.targets)) {
+    throw new Error('package.json must define napi.binaryName and napi.targets')
+}
+
+const binaryName = rootPkg.napi.binaryName
+const targetIds = rootPkg.napi.targets
+
 /**
- * Platform targets for prebuilt native binaries.
- * Package names follow @tuananh/sax-parser-<id>, e.g. @tuananh/sax-parser-linux-x64-gnu.
+ * CI runner metadata keyed by napi.targets entry.
  *
- * @typedef {object} BuildTarget
- * @property {string} id
+ * @typedef {object} TargetMeta
  * @property {string[]} os
  * @property {string[]} cpu
- * @property {string[] | undefined} libc
  * @property {string} os_runner
- * @property {string | undefined} arch setup-node architecture (darwin/win32 cross-builds)
- * @property {string | undefined} container Docker image for musl / cross builds
- * @property {string | undefined} install_deps Shell snippet run before build (musl toolchains)
+ * @property {string | undefined} arch
+ * @property {string | undefined} docker
+ * @property {string | undefined} install_deps
  */
 
-/** @type {BuildTarget[]} */
-const targets = [
-    {
-        id: 'darwin-x64',
+/** @type {Record<string, TargetMeta>} */
+const targetMeta = {
+    'darwin-x64': {
         os: ['darwin'],
         cpu: ['x64'],
         os_runner: 'macos-latest',
         arch: 'x64',
     },
-    {
-        id: 'darwin-arm64',
+    'darwin-arm64': {
         os: ['darwin'],
         cpu: ['arm64'],
         os_runner: 'macos-latest',
         arch: 'arm64',
     },
-    {
-        id: 'win32-x64',
+    'win32-x64': {
         os: ['win32'],
         cpu: ['x64'],
         os_runner: 'windows-latest',
         arch: 'x64',
     },
-    {
-        id: 'win32-arm64',
+    'win32-arm64': {
         os: ['win32'],
         cpu: ['arm64'],
         os_runner: 'windows-11-arm',
         arch: 'arm64',
     },
-    {
-        id: 'linux-x64-gnu',
+    'linux-x64-gnu': {
         os: ['linux'],
         cpu: ['x64'],
         libc: ['glibc'],
         os_runner: 'ubuntu-latest',
     },
-    {
-        id: 'linux-x64-musl',
+    'linux-x64-musl': {
         os: ['linux'],
         cpu: ['x64'],
         libc: ['musl'],
         os_runner: 'ubuntu-latest',
-        container: 'node:22-alpine',
+        docker: 'node:26-alpine',
         install_deps: 'apk add --no-cache python3 make g++',
     },
-    {
-        id: 'linux-arm64-gnu',
+    'linux-arm64-gnu': {
         os: ['linux'],
         cpu: ['arm64'],
         libc: ['glibc'],
         os_runner: 'ubuntu-24.04-arm',
     },
-    {
-        id: 'linux-arm64-musl',
+    'linux-arm64-musl': {
         os: ['linux'],
         cpu: ['arm64'],
         libc: ['musl'],
         os_runner: 'ubuntu-24.04-arm',
-        container: 'node:22-alpine',
+        docker: 'node:26-alpine',
         install_deps: 'apk add --no-cache python3 make g++',
     },
-]
+}
 
-module.exports = { targets }
+/** @typedef {TargetMeta & { id: string, libc?: string[] }} BuildTarget */
+
+/** @type {BuildTarget[]} */
+const targets = targetIds.map((id) => {
+    const meta = targetMeta[id]
+    if (!meta) {
+        throw new Error(`Unknown napi.targets entry "${id}". Add CI metadata in scripts/prebuild-targets.js`)
+    }
+    return { id, ...meta }
+})
+
+function getBinaryFileName(targetId) {
+    if (!targetIds.includes(targetId)) {
+        throw new Error(`Unknown target "${targetId}"`)
+    }
+    return `${binaryName}.${targetId}.node`
+}
+
+module.exports = { binaryName, targetIds, targets, getBinaryFileName }

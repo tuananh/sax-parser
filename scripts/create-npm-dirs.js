@@ -2,7 +2,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { targets } = require('./prebuild-targets')
+const { targets, getBinaryFileName } = require('./prebuild-targets')
 
 const rootDir = path.join(__dirname, '..')
 const npmDir = path.join(rootDir, 'npm')
@@ -12,6 +12,7 @@ fs.mkdirSync(npmDir, { recursive: true })
 
 for (const target of targets) {
     const pkgDir = path.join(npmDir, target.id)
+    const binaryFileName = getBinaryFileName(target.id)
     fs.mkdirSync(pkgDir, { recursive: true })
 
     const pkgName = `@tuananh/sax-parser-${target.id}`
@@ -24,8 +25,8 @@ for (const target of targets) {
         repository: rootPkg.repository,
         homepage: rootPkg.homepage,
         bugs: rootPkg.bugs,
-        main: 'sax_parser.node',
-        files: ['sax_parser.node', 'README.md', 'LICENSE'],
+        main: binaryFileName,
+        files: [binaryFileName, 'README.md', 'LICENSE'],
         os: target.os,
         cpu: target.cpu,
         engines: {

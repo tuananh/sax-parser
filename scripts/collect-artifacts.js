@@ -2,7 +2,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { targets } = require('./prebuild-targets')
+const { targets, getBinaryFileName } = require('./prebuild-targets')
 
 const rootDir = path.join(__dirname, '..')
 const artifactsDir = path.join(rootDir, process.env.ARTIFACTS_DIR || 'artifacts')
@@ -11,9 +11,10 @@ const npmDir = path.join(rootDir, 'npm')
 let copied = 0
 
 for (const target of targets) {
-    const source = path.join(artifactsDir, `bindings-${target.id}`, 'sax_parser.node')
+    const binaryFileName = getBinaryFileName(target.id)
+    const source = path.join(artifactsDir, `bindings-${target.id}`, binaryFileName)
     const destDir = path.join(npmDir, target.id)
-    const dest = path.join(destDir, 'sax_parser.node')
+    const dest = path.join(destDir, binaryFileName)
 
     if (!fs.existsSync(source)) {
         console.warn(`Missing artifact for ${target.id}: ${source}`)

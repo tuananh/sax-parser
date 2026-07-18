@@ -11,71 +11,70 @@ permissions:
     id-token: write
 
 jobs:
-    build:
-        name: Build ${{ matrix.target }}
-        strategy:
-            fail-fast: false
-            matrix:
-                include:
-                    - target: darwin-x64
-                      os: macos-latest
-                      arch: x64
-                    - target: darwin-arm64
-                      os: macos-latest
-                      arch: arm64
-                    - target: win32-x64
-                      os: windows-latest
-                      arch: x64
-                    - target: win32-arm64
-                      os: windows-11-arm
-                      arch: arm64
-                    - target: linux-x64-gnu
-                      os: ubuntu-latest
-                    - target: linux-x64-musl
-                      os: ubuntu-latest
-                      container: node:22-alpine
-                      install_deps: apk add --no-cache python3 make g++
-                    - target: linux-arm64-gnu
-                      os: ubuntu-24.04-arm
-                    - target: linux-arm64-musl
-                      os: ubuntu-24.04-arm
-                      container: node:22-alpine
-                      install_deps: apk add --no-cache python3 make g++
-        runs-on: ${{ matrix.os }}
-        container: ${{ matrix.container || null }}
+    prepare:
+        name: Prepare matrix
+        runs-on: ubuntu-latest
+        outputs:
+            matrix: ${{ steps.set-matrix.outputs.matrix }}
         steps:
             - uses: actions/checkout@v7
               with:
                   fetch-depth: 1
 
-            - name: Install build dependencies
-              if: matrix.install_deps
-              run: ${{ matrix.install_deps }}
+            - id: set-matrix
+              run: echo "matrix=$(node scripts/ci-matrix.js)" >> "$GITHUB_OUTPUT"
 
-            - name: Use Node.js 22
-              if: matrix.arch
+    build:
+        name: Build ${{ matrix.target }}
+        needs: prepare
+        strategy:
+            fail-fast: false
+            matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 1
+
+            - name: Use Node.js 26
+              if: ${{ !matrix.docker && matrix.arch }}
               uses: actions/setup-node@v7
               with:
-                  node-version: '22'
+                  node-version: '26'
                   architecture: ${{ matrix.arch }}
 
-            - name: Use Node.js 22
-              if: ${{ !matrix.arch }}
+            - name: Use Node.js 26
+              if: ${{ !matrix.docker && !matrix.arch }}
               uses: actions/setup-node@v7
               with:
-                  node-version: '22'
+                  node-version: '26'
 
             - name: Install dependencies
+              if: ${{ !matrix.docker }}
               run: npm install --ignore-scripts
 
             - name: Build native module
+              if: ${{ !matrix.docker }}
               run: npm run build
+
+            - name: Build native module in Docker
+              if: matrix.docker
+              run: |
+                  docker run --rm \
+                    -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+                    -w "$GITHUB_WORKSPACE" \
+                    "${{ matrix.docker }}" \
+                    sh -c "${{ matrix.install_deps }} && npm install --ignore-scripts && npm run build && node scripts/rename-artifact.js ${{ matrix.target }}"
+
+            - name: Rename artifact
+              if: ${{ !matrix.docker }}
+              run: node scripts/rename-artifact.js ${{ matrix.target }}
 
             - name: Upload artifact
               uses: actions/upload-artifact@v7
               with:
                   name: bindings-${{ matrix.target }}
-                  path: build/Release/sax_parser.node
+                  path: sax-parser.${{ matrix.target }}.node
                   if-no-files-found: error
 
     publish:
@@ -131,6 +130,6 @@ jobs:
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v2
               with:
-                  files: npm/*/sax_parser.node
+                  files: npm/*/*.node
                   generate_release_notes: true
                   fail_on_unmatched_files: true
