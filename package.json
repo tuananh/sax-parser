@@ -6,16 +6,24 @@
   "scripts": {
     "test": "cross-env NODE_OPTIONS=\"--expose-gc\" jest",
     "build": "node-gyp rebuild",
-    "install": "node-gyp rebuild",
+    "install": "node scripts/build-from-source.js",
     "benchmark": "node benchmark",
-    "fmt": "prettier --write **/*.js index.js"
+    "fmt": "prettier --write **/*.js index.js",
+    "create-npm-dirs": "node scripts/create-npm-dirs.js",
+    "artifacts": "node scripts/collect-artifacts.js",
+    "prepublishOnly": "node scripts/prepublish.js"
   },
   "files": [
-    "src/**",
-    "vendor/**",
     "index.js",
-    "binding.gyp"
+    "scripts/build-from-source.js",
+    "binding.gyp",
+    "src/**",
+    "vendor/**"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "keywords": [
     "xml",
     "sax",
@@ -32,6 +40,7 @@
   "license": "MIT",
   "dependencies": {
     "bindings": "^1.5.0",
+    "detect-libc": "^2.1.2",
     "node-addon-api": "^8.9.0"
   },
   "devDependencies": {
@@ -47,7 +56,9 @@
     "prettier": "^3.9.5",
     "sax": "^1.6.0"
   },
-  "gypfile": true,
+  "engines": {
+    "node": ">= 18"
+  },
   "directories": {
     "test": "test"
   },
