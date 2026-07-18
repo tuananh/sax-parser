@@ -19,9 +19,10 @@ describe('bom test', () => {
         ])
     })
 
-    // TODO(anh): this test is currently fail. it resolves instead of throw
-    test.skip('2 bom (beginning) => should throw', async () => {
+    test('2 bom (beginning) => should emit error', async () => {
         const xml = '\uFEFF\uFEFF<hello>world</hello>'
-        expect(() => parse(xml)).rejects.toThrow()
+        expect(await parse(xml)).toEqual([
+            ['error', { code: 'ERR_BAD_PCDATA', offset: 3 }],
+        ])
     })
 })

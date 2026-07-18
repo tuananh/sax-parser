@@ -26,7 +26,7 @@ describe('doctype test', () => {
         })
     })
 
-    test('doctype not welformed => should throw', async () => {
+    test('doctype not welformed => should emit error', async () => {
         const xmls = [
             `<!DOCTYPE`,
             `<!DOCTYPE doc`,
@@ -40,10 +40,12 @@ describe('doctype test', () => {
             `<!DOCTYPE doc SYSTEM 'foo' [<!ELEMENT foo 'ANY'>] `,
         ]
 
-        xmls.forEach(async (xml) => {
-            expect(async () => {
-                await parse(xml)
-            }).rejects.toThrow()
-        })
+        for (const xml of xmls) {
+            const events = await parse(xml)
+            expect(events[0]).toEqual([
+                'error',
+                expect.objectContaining({ code: 'ERR_BAD_DOCTYPE' }),
+            ])
+        }
     })
 })

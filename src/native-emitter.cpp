@@ -265,7 +265,7 @@ void MySAXDelegator::doctypeHandler(void *ctx, const char *doctype, size_t len)
     this->emitEvent("doctype", doctype, len);
 }
 
-void MySAXDelegator::errorHandler(void *ctx, xsxml::xml_parse_status status, char *offset)
+void MySAXDelegator::errorHandler(void *ctx, xsxml::xml_parse_status status, size_t offset)
 {
     if (!_hasError)
         return;
@@ -275,7 +275,7 @@ void MySAXDelegator::errorHandler(void *ctx, xsxml::xml_parse_status status, cha
 
     Napi::Object error = Napi::Object::New(env);
     error.Set("code", ParseStatusToString(status));
-    error.Set("offset", std::string(offset, 10));
+    error.Set("offset", Napi::Number::New(env, static_cast<double>(offset)));
     this->emitEvent("error", error);
 }
 

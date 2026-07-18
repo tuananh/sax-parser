@@ -9,6 +9,16 @@ function parse() {
     const parser = new SaxParser()
     return new Promise((resolve) => {
         var evsReceived = []
+        let settled = false
+
+        function finish() {
+            if (settled) {
+                return
+            }
+            settled = true
+            resolve(evsReceived)
+        }
+
         parser.on('processingInstruction', (pi) => {
             evsReceived.push(['processingInstruction', pi])
         })
@@ -33,9 +43,11 @@ function parse() {
         parser.on('cdata', function (cdata) {
             evsReceived.push(['cdata', cdata])
         })
-        parser.on('endDocument', () => {
-            resolve(evsReceived)
+        parser.on('error', function (error) {
+            evsReceived.push(['error', error])
+            finish()
         })
+        parser.on('endDocument', finish)
 
         for (let i = 0; i < arguments.length; i++) {
             const arg = arguments[i]

@@ -22,7 +22,7 @@ public:
     void startDocument(void *ctx) override;
     void endDocument(void *ctx) override;
     void doctypeHandler(void *ctx, const char *s, size_t len) override;
-    void errorHandler(void *ctx, xsxml::xml_parse_status, char *) override;
+    void errorHandler(void *ctx, xsxml::xml_parse_status, size_t offset) override;
     void startDeclAttr(void *ctx, const char *name, size_t nameLen, const char *value, size_t valueLen) override;
     void endDeclAttr(void *ctx) override;
     void xmlDeclarationHandler(void *ctx, const char **attrs) override;

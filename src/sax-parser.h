@@ -52,7 +52,7 @@ public:
     virtual void startDocument(void *ctx) = 0;
     virtual void endDocument(void *ctx) = 0;
     virtual void doctypeHandler(void *ctx, const char *s, size_t len) = 0;
-    virtual void errorHandler(void *ctx, xsxml::xml_parse_status, char *) = 0;
+    virtual void errorHandler(void *ctx, xsxml::xml_parse_status, size_t offset) = 0;
     virtual void startDeclAttr(void *ctx, const char *name, size_t nameLen, const char *value, size_t valueLen) = 0;
     virtual void endDeclAttr(void *ctx) = 0;
     virtual void xmlDeclarationHandler(void *ctx, const char **attrs) = 0;
@@ -72,6 +72,7 @@ class SAXParser
     bool _emitEvents;
     SAX2Hander *_saxHandler;
     std::string _parseBuffer;
+    char *_parseBase;
 
 public:
     SAXParser();

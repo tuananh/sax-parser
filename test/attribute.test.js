@@ -20,16 +20,16 @@ describe('attribute test', () => {
 
     test('trailing attribute with no value should throw', async () => {
         const xml = '<hello key />'
-        expect(async () => {
-            await parse(xml)
-        }).rejects.toThrow()
+        expect(await parse(xml)).toEqual([
+            ['error', { code: 'ERR_BAD_ATTRIBUTE', offset: 12 }],
+        ])
     })
 
     test('unquoted attribute should throw', async () => {
         const xml = '<xml hello=world />'
-        expect(async () => {
-            await parse(xml)
-        }).rejects.toThrow()
+        expect(await parse(xml)).toEqual([
+            ['error', { code: 'ERR_BAD_ATTRIBUTE', offset: 11 }],
+        ])
     })
 
     test('attribute value contains special char => should parse correctly', async () => {

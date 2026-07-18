@@ -117,8 +117,8 @@ describe('element test', () => {
     })
 
     test('tag name starts with ampersand => throw', async () => {
-        expect(async () => {
-            await parse('<&foo/>')
-        }).rejects.toThrow()
+        expect(await parse('<&foo/>')).toEqual([
+            ['error', { code: 'ERR_UNRECOGNIZE_TAG', offset: 1 }],
+        ])
     })
 })

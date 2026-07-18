@@ -131,7 +131,8 @@ SAXParser::SAXParser()
       _emitPerAttributeEvents(false),
       _emitEndAttributeEvent(false),
       _emitEvents(true),
-      _saxHandler(new SAX2Hander())
+      _saxHandler(new SAX2Hander()),
+      _parseBase(nullptr)
 {
     _saxHandler->setSAXParserImp(this);
 }
@@ -202,6 +203,7 @@ bool SAXParser::feed(const char *xmlData, size_t dataLength, bool flush)
 
 bool SAXParser::parseStanza(char *xmlData, size_t dataLength, bool isRoot)
 {
+    _parseBase = xmlData;
     _suppressDocumentEvents = !isRoot;
 
     unsigned int options = xsxml::parse_full;
@@ -211,6 +213,7 @@ bool SAXParser::parseStanza(char *xmlData, size_t dataLength, bool isRoot)
     xsxml::xml_parse_result result =
         xsxml::xml_sax3_parser::parse(xmlData, static_cast<int>(dataLength), *_saxHandler, options);
 
+    _parseBase = nullptr;
     _suppressDocumentEvents = false;
 
     return static_cast<bool>(result);
@@ -317,7 +320,11 @@ void SAXParser::errorHandler(void *ctx, xsxml::xml_parse_status s,
     if (!parser->_emitEvents || parser->_delegator == nullptr)
         return;
 
-    parser->_delegator->errorHandler(ctx, s, offset);
+    size_t byteOffset = 0;
+    if (parser->_parseBase != nullptr && offset != nullptr)
+        byteOffset = static_cast<size_t>(offset - parser->_parseBase);
+
+    parser->_delegator->errorHandler(ctx, s, byteOffset);
 }
 void SAXParser::startDeclAttr(void *ctx, const XML_CHAR *name, size_t nameLen, const XML_CHAR *value, size_t valueLen)
 {
