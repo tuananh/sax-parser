@@ -4,16 +4,21 @@ const EventEmitter = require('events').EventEmitter
 const Stream = require('stream').Stream
 const inherits = require('util').inherits
 
-function loadBinding() {
-    let name = `@tuananh/sax-parser-${process.platform}-${process.arch}`
-    if (process.platform === 'linux') {
-        const { MUSL, familySync } = require('detect-libc')
-        if (familySync() === MUSL) {
-            name += '-musl'
-        } else {
-            name += '-gnu'
-        }
+function resolvePlatformTarget() {
+    const { platform, arch } = process
+    if (platform === 'win32') {
+        return `${platform}-${arch}-msvc`
     }
+    if (platform === 'linux') {
+        const { MUSL, familySync } = require('detect-libc')
+        return `${platform}-${arch}-${familySync() === MUSL ? 'musl' : 'gnu'}`
+    }
+    return `${platform}-${arch}`
+}
+
+function loadBinding() {
+    const target = resolvePlatformTarget()
+    const name = `@tuananh/sax-parser-${target}`
 
     try {
         return require(name)

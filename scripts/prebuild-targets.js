@@ -35,13 +35,13 @@ const targetMeta = {
         os_runner: 'macos-latest',
         arch: 'arm64',
     },
-    'win32-x64': {
+    'win32-x64-msvc': {
         os: ['win32'],
         cpu: ['x64'],
         os_runner: 'windows-latest',
         arch: 'x64',
     },
-    'win32-arm64': {
+    'win32-arm64-msvc': {
         os: ['win32'],
         cpu: ['arm64'],
         os_runner: 'windows-11-arm',

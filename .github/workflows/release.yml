@@ -5,9 +5,14 @@ on:
         tags:
             - 'v*'
     workflow_dispatch:
+        inputs:
+            publish:
+                description: Publish to npm after a successful build
+                type: boolean
+                default: false
 
 permissions:
-    contents: write
+    contents: read
     id-token: write
 
 jobs:
@@ -80,8 +85,16 @@ jobs:
     publish:
         name: Publish to npm
         needs: build
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        if: >
+            success() &&
+            (
+              (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+              (github.event_name == 'workflow_dispatch' && inputs.publish)
+            )
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            id-token: write
         steps:
             - uses: actions/checkout@v7
               with:
@@ -94,6 +107,7 @@ jobs:
                   registry-url: https://registry.npmjs.org
 
             - name: Set version from tag
+              if: github.event_name == 'push'
               run: npm version "${GITHUB_REF#refs/tags/v}" --no-git-tag-version --allow-same-version
 
             - name: Install dependencies
@@ -117,17 +131,12 @@ jobs:
 
             - name: Publish platform packages
               run: node scripts/prepublish.js
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-                  NPM_CONFIG_PROVENANCE: 'true'
 
             - name: Publish root package
               run: npm publish --access public --ignore-scripts
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-                  NPM_CONFIG_PROVENANCE: 'true'
 
             - name: Create GitHub Release
+              if: github.event_name == 'push'
               uses: softprops/action-gh-release@v2
               with:
                   files: npm/*/*.node

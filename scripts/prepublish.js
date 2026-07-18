@@ -39,10 +39,6 @@ for (const target of targets) {
     execSync('npm publish --access public', {
         cwd: pkgDir,
         stdio: 'inherit',
-        env: {
-            ...process.env,
-            NPM_CONFIG_PROVENANCE: process.env.NPM_CONFIG_PROVENANCE || 'true',
-        },
     })
 }
 
