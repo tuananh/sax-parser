@@ -31,15 +31,15 @@ Results on Node.js v26.1.0, Linux x64:
 
 | module              | ops/sec | native | XML compliant | stream |
 | ------------------- | ------- | ------ | ------------- | ------ |
-| @tuananh/sax-parser | 40,703  | ✘      | ✘             | ✘      |
-| ltx                 | 5,557   | ☐      | ☐             | ✘      |
-| sax                 | 1,501   | ☐      | ✘             | ✘      |
-| node-expat          | 1,418   | ✘      | ✘             | ✘      |
-| node-xml            | 674     | ☐      | ✘             | ✘      |
+| @tuananh/sax-parser | 59,893  | ✘      | ✘             | ✘      |
+| ltx                 | 4,357   | ☐      | ☐             | ✘      |
+| sax                 | 1,599   | ☐      | ✘             | ✘      |
+| node-expat          | 1,355   | ✘      | ✘             | ✘      |
+| node-xml            | 760     | ☐      | ✘             | ✘      |
 
 ops/sec: higher is better.
 
-`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` leads this comparison by roughly **7×** over `ltx` and **28×** over `sax`, while also supporting streaming.
+`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` leads this comparison by roughly **14×** over `ltx` and **37×** over `sax`, while also supporting streaming.
 
 ## Usage
 
