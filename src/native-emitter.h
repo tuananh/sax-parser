@@ -1,7 +1,82 @@
 #include <memory>
+#include <vector>
 #include <napi.h>
 
 #include "sax-parser.h"
+
+class ListenerList
+{
+public:
+    void reset()
+    {
+        _listeners.clear();
+        _singleListener = Napi::FunctionReference();
+    }
+
+    void load(Napi::Object &events, const char *eventName)
+    {
+        reset();
+        if (!events.Has(eventName))
+            return;
+
+        Napi::Value val = events.Get(eventName);
+        if (val.IsFunction())
+        {
+            _singleListener = Napi::Persistent(val.As<Napi::Function>());
+            return;
+        }
+
+        if (!val.IsArray())
+            return;
+
+        Napi::Array arr = val.As<Napi::Array>();
+        for (uint32_t i = 0; i < arr.Length(); i++)
+        {
+            Napi::Value item = arr[i];
+            if (item.IsFunction())
+                _listeners.push_back(Napi::Persistent(item.As<Napi::Function>()));
+        }
+    }
+
+    bool empty() const { return !_singleListener && _listeners.empty(); }
+
+    bool needsArg(size_t index) const
+    {
+        if (_singleListener)
+        {
+            Napi::Value lengthValue = _singleListener.Value().Get("length");
+            return lengthValue.IsNumber() &&
+                   static_cast<size_t>(lengthValue.As<Napi::Number>().Uint32Value()) > index;
+        }
+
+        for (const auto &listener : _listeners)
+        {
+            Napi::Value lengthValue = listener.Value().Get("length");
+            if (lengthValue.IsNumber() &&
+                static_cast<size_t>(lengthValue.As<Napi::Number>().Uint32Value()) > index)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void call(Napi::Object receiver, const std::initializer_list<napi_value> &args) const
+    {
+        if (_singleListener)
+        {
+            _singleListener.Call(receiver, args);
+            return;
+        }
+
+        for (const auto &listener : _listeners)
+            listener.Call(receiver, args);
+    }
+
+private:
+    Napi::FunctionReference _singleListener;
+    std::vector<Napi::FunctionReference> _listeners;
+};
 
 class MySAXDelegator : public saxparser::SAXDelegator
 {
@@ -9,6 +84,7 @@ public:
     explicit MySAXDelegator(Napi::ObjectReference jsThis);
     ~MySAXDelegator();
 
+    void markListenersDirty();
     void beginParse(saxparser::SAXParser *parser);
 
     void startElement(void *ctx, const char *name, const char **attrs) override;
@@ -30,7 +106,24 @@ public:
 
 private:
     Napi::ObjectReference _jsThis;
-    Napi::FunctionReference _emit;
+    ListenerList _startElementListeners;
+    ListenerList _endElementListeners;
+    ListenerList _startAttributeListeners;
+    ListenerList _endAttributeListeners;
+    ListenerList _textListeners;
+    ListenerList _cdataListeners;
+    ListenerList _commentListeners;
+    ListenerList _startDocumentListeners;
+    ListenerList _endDocumentListeners;
+    ListenerList _endListeners;
+    ListenerList _finishListeners;
+    ListenerList _doneListeners;
+    ListenerList _doctypeListeners;
+    ListenerList _errorListeners;
+    ListenerList _startXmlDeclAttrListeners;
+    ListenerList _endXmlDeclAttrListeners;
+    ListenerList _xmlDeclListeners;
+    ListenerList _processingInstructionListeners;
     bool _hasAnyListeners;
     bool _hasStartElement;
     bool _hasEndElement;
@@ -50,13 +143,18 @@ private:
     bool _hasEndXmlDeclAttr;
     bool _hasXmlDecl;
     bool _hasProcessingInstruction;
+    bool _needsStartElementAttrs;
+    bool _needsStartElementName;
+    bool _needsEndElementName;
+    bool _needsTextValue;
+    bool _listenersDirty;
+    saxparser::SAXEventNeeds _cachedEventNeeds;
+    Napi::ObjectReference _emptyAttribs;
 
-    void refreshListenerFlags();
+    void refreshListeners();
+    Napi::Object emptyAttribs(Napi::Env env);
 
-    void emitEvent(const char *eventName);
-    void emitEvent(const char *eventName, const char *data, size_t len);
-    void emitEvent(const char *eventName, Napi::Object obj);
-    void emitEvent(const char *eventName, const char *name, Napi::Object obj);
+    void emitTo(const ListenerList &listeners, const std::initializer_list<napi_value> &args);
 };
 
 class SaxParser : public Napi::ObjectWrap<SaxParser>
@@ -71,7 +169,9 @@ private:
 
     std::unique_ptr<saxparser::SAXParser> _parser;
     std::unique_ptr<MySAXDelegator> _delegator;
+    std::string _parseInput;
 
     void Parse(const Napi::CallbackInfo &info);
     void Feed(const Napi::CallbackInfo &info);
+    void MarkListenersDirty(const Napi::CallbackInfo &info);
 };

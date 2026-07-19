@@ -48,6 +48,30 @@ const SaxParser = loadBinding().SaxParser
 inherits(SaxParser, EventEmitter)
 inherits(SaxParser, Stream)
 
+function markListenersDirty() {
+    if (typeof this._markListenersDirty === 'function') {
+        this._markListenersDirty()
+    }
+}
+
+;[
+    'on',
+    'once',
+    'off',
+    'removeListener',
+    'removeAllListeners',
+    'prependListener',
+    'prependOnceListener',
+    'addListener',
+].forEach(function (method) {
+    const original = EventEmitter.prototype[method]
+    SaxParser.prototype[method] = function () {
+        const result = original.apply(this, arguments)
+        markListenersDirty.call(this)
+        return result
+    }
+})
+
 SaxParser.prototype.write = function (data) {
     if (data == null) {
         return this.feed(null, true)

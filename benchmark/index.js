@@ -32,9 +32,18 @@ const xmlSizeKb = (Buffer.byteLength(xml, 'utf8') / 1024).toFixed(1)
 console.log(
     `Generated XML: ${xmlSizeKb} KB (${xml.match(/<item /g).length} items)`
 )
+console.log(
+    'All parsers register noop startElement/endElement/text handlers'
+)
+
+const noop = function () {}
 
 function NodeXmlParser() {
-    const parser = new nodeXml.SaxParser(function (cb) {})
+    const parser = new nodeXml.SaxParser(function (cb) {
+        cb.onStartElementNS(noop)
+        cb.onEndElementNS(noop)
+        cb.onCharacters(noop)
+    })
     this.parse = function (s) {
         parser.parseString(s)
     }
@@ -43,6 +52,9 @@ function NodeXmlParser() {
 
 function SaxParser() {
     const parser = sax.parser()
+    parser.onopentag = noop
+    parser.onclosetag = noop
+    parser.ontext = noop
     this.parse = function (s) {
         parser.write(s).close()
     }
@@ -51,6 +63,9 @@ function SaxParser() {
 
 function ThisSaxParser() {
     const parser = new MySaxParser()
+    parser.on('startElement', noop)
+    parser.on('endElement', noop)
+    parser.on('text', noop)
     this.parse = function (s) {
         parser.parse(s)
     }
@@ -59,6 +74,9 @@ function ThisSaxParser() {
 
 function ExpatParser() {
     const parser = new expat.Parser()
+    parser.on('startElement', noop)
+    parser.on('endElement', noop)
+    parser.on('text', noop)
     this.parse = function (s) {
         parser.parse(s, false)
     }
@@ -67,6 +85,9 @@ function ExpatParser() {
 
 function LtxParser() {
     var parser = new LtxSaxParser()
+    parser.on('startElement', noop)
+    parser.on('endElement', noop)
+    parser.on('text', noop)
     this.parse = function (s) {
         parser.write(s)
     }
@@ -75,6 +96,9 @@ function LtxParser() {
 
 function SaxophoneParser() {
     const parser = new Saxophone()
+    parser.on('tagopen', noop)
+    parser.on('tagclose', noop)
+    parser.on('text', noop)
     this.parse = function (s) {
         parser.parse(s)
     }
@@ -83,6 +107,9 @@ function SaxophoneParser() {
 
 function EasysaxParser() {
     const parser = new EasySAXParser()
+    parser.on('startNode', noop)
+    parser.on('endNode', noop)
+    parser.on('textNode', noop)
     this.parse = function (s) {
         parser.parse(s)
     }

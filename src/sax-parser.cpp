@@ -28,85 +28,129 @@ public:
         _xmlDeclAttrs.reserve(8);
 
         _sax3Handler.xml_start_element_cb = [=](char *name, size_t size) {
+            if (!_saxParserImpl->eventNeeds().startElement)
+                return;
             _curEleName = xsxml::string_view(name, size);
         };
         _sax3Handler.xml_attr_cb = [=](const char *name, size_t nameLen,
                                        const char *value, size_t valueLen) {
-            _curEleAttrs.push_back(name);
-            _curEleAttrs.push_back(value);
             if (_saxParserImpl->emitPerAttributeEvents())
             {
                 SAXParser::startAttribute(_saxParserImpl, (const XML_CHAR *)name, nameLen,
                                           (const XML_CHAR *)value, valueLen);
             }
+            if (!_saxParserImpl->needsElementAttributes())
+                return;
+
+            _curEleAttrs.push_back(name);
+            _curEleAttrs.push_back(value);
         };
         _sax3Handler.xml_end_attr_cb = [=]() {
-            if (!_curEleAttrs.empty())
+            if (_saxParserImpl->eventNeeds().startElement)
             {
-                _curEleAttrs.push_back(nullptr);
-                SAXParser::startElement(_saxParserImpl,
-                                        (const XML_CHAR *)_curEleName.c_str(),
-                                        (const XML_CHAR **)&_curEleAttrs[0]);
-                _curEleAttrs.clear();
+                if (!_curEleAttrs.empty())
+                {
+                    _curEleAttrs.push_back(nullptr);
+                    SAXParser::startElement(_saxParserImpl,
+                                            (const XML_CHAR *)_curEleName.c_str(),
+                                            (const XML_CHAR **)&_curEleAttrs[0]);
+                    _curEleAttrs.clear();
+                }
+                else
+                {
+                    const char *attr = nullptr;
+                    const char **attrs = &attr;
+                    SAXParser::startElement(_saxParserImpl,
+                                            (const XML_CHAR *)_curEleName.c_str(),
+                                            (const XML_CHAR **)attrs);
+                }
             }
             else
             {
-                const char *attr = nullptr;
-                const char **attrs = &attr;
-                SAXParser::startElement(_saxParserImpl,
-                                        (const XML_CHAR *)_curEleName.c_str(),
-                                        (const XML_CHAR **)attrs);
+                _curEleAttrs.clear();
             }
 
             if (_saxParserImpl->emitEndAttributeEvent())
                 SAXParser::endAttribute(_saxParserImpl);
         };
         _sax3Handler.xml_end_element_cb = [=](const char *name, size_t len) {
+            if (!_saxParserImpl->eventNeeds().endElement)
+                return;
             SAXParser::endElement(_saxParserImpl, (const XML_CHAR *)name, len);
         };
         _sax3Handler.xml_text_cb = [=](const char *s, size_t len) {
+            if (!_saxParserImpl->eventNeeds().text)
+                return;
             SAXParser::textHandler(_saxParserImpl, (const XML_CHAR *)s, len);
         };
         _sax3Handler.xml_cdata_cb = [=](const char *s, size_t len) {
+            if (!_saxParserImpl->eventNeeds().cdata)
+                return;
             SAXParser::cdataHandler(_saxParserImpl, (const XML_CHAR *)s, len);
         };
         _sax3Handler.xml_comment_cb = [=](const char *s, size_t len) {
+            if (!_saxParserImpl->eventNeeds().comment)
+                return;
             SAXParser::commentHandler(_saxParserImpl, (const XML_CHAR *)s, len);
         };
         _sax3Handler.xml_start_document_cb = [=]() {
+            if (!_saxParserImpl->eventNeeds().startDocument)
+                return;
             SAXParser::startDocument(_saxParserImpl);
         };
         _sax3Handler.xml_end_document_cb = [=]() {
+            if (!_saxParserImpl->eventNeeds().endDocument)
+                return;
             SAXParser::endDocument(_saxParserImpl);
         };
         _sax3Handler.xml_doctype_cb = [=](const char *s, size_t len) {
+            if (!_saxParserImpl->eventNeeds().doctype)
+                return;
             SAXParser::doctypeHandler(_saxParserImpl, (const XML_CHAR *)s, len);
         };
         _sax3Handler.xml_error_cb = [=](xsxml::xml_parse_status s, char *offset) {
+            if (!_saxParserImpl->eventNeeds().error)
+                return;
             SAXParser::errorHandler(_saxParserImpl, s, offset);
         };
         _sax3Handler.xml_decl_attr_cb = [=](const char *name, size_t nameLen, const char *value, size_t valueLen) {
+            if (_saxParserImpl->eventNeeds().startXmlDeclAttr)
+            {
+                SAXParser::startDeclAttr(_saxParserImpl, (const XML_CHAR *)name, nameLen, (const XML_CHAR *)value, valueLen);
+            }
+            if (!_saxParserImpl->needsXmlDeclAttributes())
+                return;
+
             _xmlDeclAttrs.push_back(name);
             _xmlDeclAttrs.push_back(value);
-            SAXParser::startDeclAttr(_saxParserImpl, (const XML_CHAR *)name, nameLen, (const XML_CHAR *)value, valueLen);
         };
         _sax3Handler.xml_end_decl_attr_cb = [=]() {
-            if (!_xmlDeclAttrs.empty())
+            if (_saxParserImpl->eventNeeds().xmlDecl)
             {
-                _xmlDeclAttrs.push_back(nullptr);
-                SAXParser::xmlDeclarationHandler(_saxParserImpl, (const XML_CHAR **)&_xmlDeclAttrs[0]);
-                _xmlDeclAttrs.clear();
+                if (!_xmlDeclAttrs.empty())
+                {
+                    _xmlDeclAttrs.push_back(nullptr);
+                    SAXParser::xmlDeclarationHandler(_saxParserImpl, (const XML_CHAR **)&_xmlDeclAttrs[0]);
+                    _xmlDeclAttrs.clear();
+                }
+                else
+                {
+                    const char *attr = nullptr;
+                    const char **attrs = &attr;
+                    SAXParser::xmlDeclarationHandler(_saxParserImpl, (const XML_CHAR **)attrs);
+                }
             }
             else
             {
-                const char *attr = nullptr;
-                const char **attrs = &attr;
-                SAXParser::xmlDeclarationHandler(_saxParserImpl, (const XML_CHAR **)attrs);
+                _xmlDeclAttrs.clear();
             }
 
-            SAXParser::endDeclAttr(_saxParserImpl);
+            if (_saxParserImpl->eventNeeds().endXmlDeclAttr)
+                SAXParser::endDeclAttr(_saxParserImpl);
         };
         _sax3Handler.xml_pi_cb = [=](const char *target, size_t targetLen, const char *instruction, size_t instructionLen) {
+            if (!_saxParserImpl->eventNeeds().processingInstruction)
+                return;
             SAXParser::piHandler(_saxParserImpl, (const XML_CHAR *)target, targetLen, (const XML_CHAR *)instruction, instructionLen);
         };
     };
@@ -372,6 +416,11 @@ void SAXParser::setEmitPerAttributeEvents(bool emitAttributes, bool emitEndAttri
 void SAXParser::setEmitEvents(bool emitEvents)
 {
     _emitEvents = emitEvents;
+}
+
+void SAXParser::setEventNeeds(const SAXEventNeeds &needs)
+{
+    _eventNeeds = needs;
 }
 
 } // namespace saxparser

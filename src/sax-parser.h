@@ -59,6 +59,26 @@ public:
     virtual void piHandler(void *ctx, const char *target, size_t, const char *instruction, size_t) = 0;
 };
 
+struct SAXEventNeeds
+{
+    bool startElement = false;
+    bool startElementAttributes = false;
+    bool endElement = false;
+    bool startAttribute = false;
+    bool endAttribute = false;
+    bool text = false;
+    bool cdata = false;
+    bool comment = false;
+    bool startDocument = false;
+    bool endDocument = false;
+    bool doctype = false;
+    bool error = false;
+    bool startXmlDeclAttr = false;
+    bool endXmlDeclAttr = false;
+    bool xmlDecl = false;
+    bool processingInstruction = false;
+};
+
 class SAXParser
 {
     SAXDelegator *_delegator;
@@ -70,6 +90,7 @@ class SAXParser
     bool _emitPerAttributeEvents;
     bool _emitEndAttributeEvent;
     bool _emitEvents;
+    SAXEventNeeds _eventNeeds;
     SAX2Hander *_saxHandler;
     std::string _parseBuffer;
     char *_parseBase;
@@ -86,8 +107,18 @@ public:
     void setDelegator(SAXDelegator *delegator);
     void setEmitPerAttributeEvents(bool emitAttributes, bool emitEndAttribute);
     void setEmitEvents(bool emitEvents);
+    void setEventNeeds(const SAXEventNeeds &needs);
+    const SAXEventNeeds &eventNeeds() const { return _eventNeeds; }
     bool emitPerAttributeEvents() const { return _emitPerAttributeEvents; }
     bool emitEndAttributeEvent() const { return _emitEndAttributeEvent; }
+    bool needsElementAttributes() const
+    {
+        return _eventNeeds.startElementAttributes || _emitPerAttributeEvents;
+    }
+    bool needsXmlDeclAttributes() const
+    {
+        return _eventNeeds.xmlDecl || _eventNeeds.startXmlDeclAttr;
+    }
     static void startElement(void *ctx, const XML_CHAR *name,
                              const XML_CHAR **atts);
     static void endElement(void *ctx, const XML_CHAR *name, size_t len);
