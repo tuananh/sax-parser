@@ -21,7 +21,7 @@ pnpm install @tuananh/sax-parser
 
 ## Benchmark
 
-[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document. Each parser runs a full-document parse with **no event handlers** registered, measuring raw parse throughput only.
+[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document. Each parser registers noop `startElement`, `endElement`, and `text` handlers so the comparison includes event dispatch overhead.
 
 ```sh
 npm run benchmark
@@ -31,17 +31,17 @@ Results on Node.js v26.5.0, Linux x64:
 
 | module              | ops/sec | native | XML compliant | stream |
 | ------------------- | ------- | ------ | ------------- | ------ |
-| @tuananh/sax-parser | 63,741  | ✅     | ✅            | ✅     |
-| easysax             | 12,319  | ❌     | ✅            | ✅     |
-| saxophone           | 9,311   | ❌     | ✅            | ✅     |
-| ltx                 | 4,117   | ❌     | ❌            | ✅     |
-| sax                 | 1,580   | ❌     | ✅            | ✅     |
-| node-expat          | 1,357   | ✅     | ✅            | ✅     |
-| node-xml            | 764     | ❌     | ✅            | ✅     |
+| easysax             | 12,976  | ❌     | ✅            | ✅     |
+| @tuananh/sax-parser | 8,718   | ✅     | ✅            | ✅     |
+| saxophone           | 7,539   | ❌     | ✅            | ✅     |
+| ltx                 | 3,904   | ❌     | ❌            | ✅     |
+| sax                 | 1,527   | ❌     | ✅            | ✅     |
+| node-expat          | 1,201   | ✅     | ✅            | ✅     |
+| node-xml            | 753     | ❌     | ✅            | ✅     |
 
 ops/sec: higher is better.
 
-`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` leads this comparison by roughly **15×** over `ltx` and **40×** over `sax`, while also supporting streaming.
+`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` ranks second in this comparison, ahead of other native parsers (`node-expat`) and pure-JS options like `sax`, while supporting streaming and full XML compliance.
 
 ## Usage
 
