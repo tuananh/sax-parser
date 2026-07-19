@@ -104,7 +104,7 @@ SAXEventNeeds eventNeedsFromFlags(const ListenerFlags &flags)
 {
     SAXEventNeeds needs;
     needs.startElement = flags.startElement;
-    needs.startElementAttributes = flags.startElement;
+    needs.startElementAttributes = flags.startElement && flags.startElementNeedsArgs;
     needs.endElement = flags.endElement;
     needs.startAttribute = flags.startAttribute;
     needs.endAttribute = flags.endAttribute;
@@ -118,12 +118,13 @@ SAXEventNeeds eventNeedsFromFlags(const ListenerFlags &flags)
     needs.startXmlDeclAttr = flags.startXmlDeclAttr;
     needs.endXmlDeclAttr = flags.endXmlDeclAttr;
     needs.xmlDecl = flags.xmlDecl;
+    needs.xmlDeclAttributes = flags.xmlDecl && flags.xmlDeclNeedsArgs;
     needs.processingInstruction = flags.processingInstruction;
     return needs;
 }
 
 CollectingSAXDelegator::CollectingSAXDelegator(EventCollector *collector)
-    : _collector(collector)
+    : _collector(collector), _collectStartElementAttrs(false), _collectXmlDeclAttrs(false)
 {
 }
 
@@ -131,6 +132,8 @@ void CollectingSAXDelegator::beginParse(SAXParser *parser)
 {
     parser->setEmitEvents(true);
     parser->setEmitPerAttributeEvents(false, false);
+    _collectStartElementAttrs = parser->eventNeeds().startElementAttributes;
+    _collectXmlDeclAttrs = parser->eventNeeds().xmlDeclAttributes;
 }
 
 void CollectingSAXDelegator::pushSlice(uint32_t type, const char *data, size_t len)
@@ -167,7 +170,8 @@ void CollectingSAXDelegator::startElement(void *ctx, const char *name, const cha
     if (_collector == nullptr)
         return;
 
-    const uint32_t attrOffset = _collector->pushAttributes(attrs);
+    const uint32_t attrOffset =
+        _collectStartElementAttrs ? _collector->pushAttributes(attrs) : 0;
     _collector->pushEvent(kCollectedStartElement, _collector->xmlOffset(name),
                           static_cast<uint32_t>(std::strlen(name)), attrOffset, 0);
 }
@@ -241,7 +245,7 @@ void CollectingSAXDelegator::xmlDeclarationHandler(void *ctx, const char **attrs
     if (_collector == nullptr)
         return;
 
-    const uint32_t attrOffset = _collector->pushAttributes(attrs);
+    const uint32_t attrOffset = _collectXmlDeclAttrs ? _collector->pushAttributes(attrs) : 0;
     _collector->pushEvent(kCollectedXmlDecl, 0, 0, attrOffset, 0);
 }
 

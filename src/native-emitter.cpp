@@ -6,6 +6,47 @@
 
 using namespace saxparser;
 
+namespace
+{
+
+bool functionNeedsArgs(const Napi::Function &fn)
+{
+    Napi::Value length = fn.Get("length");
+    return length.IsNumber() && length.As<Napi::Number>().Int32Value() > 0;
+}
+
+bool listenersNeedArgs(const Napi::Value &value)
+{
+    if (value.IsUndefined() || value.IsNull())
+        return false;
+
+    if (value.IsFunction())
+        return functionNeedsArgs(value.As<Napi::Function>());
+
+    if (value.IsArray())
+    {
+        Napi::Array arr = value.As<Napi::Array>();
+        const uint32_t length = arr.Length();
+        for (uint32_t i = 0; i < length; i++)
+        {
+            Napi::Value item = arr[i];
+            if (item.IsFunction() && functionNeedsArgs(item.As<Napi::Function>()))
+                return true;
+        }
+    }
+
+    return false;
+}
+
+void setListenerFlag(Napi::Object &listeners, const char *name, bool &registered, bool &needsArgs)
+{
+    Napi::Value value = listeners.Get(name);
+    registered = !value.IsUndefined() && !value.IsNull();
+    needsArgs = registered && listenersNeedArgs(value);
+}
+
+} // namespace
+
 Napi::FunctionReference SaxParser::constructor;
 
 Napi::Object SaxParser::Init(Napi::Env env, Napi::Object exports)
@@ -59,24 +100,27 @@ void ListenerRegistry::refreshFlags()
 
     Napi::Object listeners = events.As<Napi::Object>();
     _flags.hasAnyListeners = true;
-    _flags.startElement = listeners.Has("startElement");
-    _flags.endElement = listeners.Has("endElement");
+    setListenerFlag(listeners, "startElement", _flags.startElement,
+                    _flags.startElementNeedsArgs);
+    setListenerFlag(listeners, "endElement", _flags.endElement, _flags.endElementNeedsArgs);
+    setListenerFlag(listeners, "text", _flags.text, _flags.textNeedsArgs);
+    setListenerFlag(listeners, "cdata", _flags.cdata, _flags.cdataNeedsArgs);
+    setListenerFlag(listeners, "comment", _flags.comment, _flags.commentNeedsArgs);
+    setListenerFlag(listeners, "doctype", _flags.doctype, _flags.doctypeNeedsArgs);
+    setListenerFlag(listeners, "xmlDecl", _flags.xmlDecl, _flags.xmlDeclNeedsArgs);
+    setListenerFlag(listeners, "processingInstruction", _flags.processingInstruction,
+                    _flags.processingInstructionNeedsArgs);
+
     _flags.startAttribute = listeners.Has("startAttribute");
     _flags.endAttribute = listeners.Has("endAttribute");
-    _flags.text = listeners.Has("text");
-    _flags.cdata = listeners.Has("cdata");
-    _flags.comment = listeners.Has("comment");
     _flags.startDocument = listeners.Has("startDocument");
     _flags.endDocument = listeners.Has("endDocument");
     _flags.end = listeners.Has("end");
     _flags.finish = listeners.Has("finish");
     _flags.done = listeners.Has("done");
-    _flags.doctype = listeners.Has("doctype");
     _flags.error = listeners.Has("error");
     _flags.startXmlDeclAttr = listeners.Has("startXmlDeclAttr");
     _flags.endXmlDeclAttr = listeners.Has("endXmlDeclAttr");
-    _flags.xmlDecl = listeners.Has("xmlDecl");
-    _flags.processingInstruction = listeners.Has("processingInstruction");
 }
 
 void ListenerRegistry::beginParse(SAXParser *parser)

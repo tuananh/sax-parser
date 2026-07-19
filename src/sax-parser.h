@@ -76,6 +76,7 @@ struct SAXEventNeeds
     bool startXmlDeclAttr = false;
     bool endXmlDeclAttr = false;
     bool xmlDecl = false;
+    bool xmlDeclAttributes = false;
     bool processingInstruction = false;
 };
 
@@ -117,7 +118,7 @@ public:
     }
     bool needsXmlDeclAttributes() const
     {
-        return _eventNeeds.xmlDecl || _eventNeeds.startXmlDeclAttr;
+        return _eventNeeds.xmlDeclAttributes;
     }
     static void startElement(void *ctx, const XML_CHAR *name,
                              const XML_CHAR **atts);

@@ -94,6 +94,8 @@ public:
 
 private:
     EventCollector *_collector;
+    bool _collectStartElementAttrs;
+    bool _collectXmlDeclAttrs;
 
     void pushSlice(uint32_t type, const char *data, size_t len);
 };
@@ -102,23 +104,31 @@ struct ListenerFlags
 {
     bool hasAnyListeners;
     bool startElement;
+    bool startElementNeedsArgs;
     bool endElement;
+    bool endElementNeedsArgs;
     bool startAttribute;
     bool endAttribute;
     bool text;
+    bool textNeedsArgs;
     bool cdata;
+    bool cdataNeedsArgs;
     bool comment;
+    bool commentNeedsArgs;
     bool startDocument;
     bool endDocument;
     bool end;
     bool finish;
     bool done;
     bool doctype;
+    bool doctypeNeedsArgs;
     bool error;
     bool startXmlDeclAttr;
     bool endXmlDeclAttr;
     bool xmlDecl;
+    bool xmlDeclNeedsArgs;
     bool processingInstruction;
+    bool processingInstructionNeedsArgs;
 };
 
 SAXEventNeeds eventNeedsFromFlags(const ListenerFlags &flags);
