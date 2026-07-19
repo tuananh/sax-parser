@@ -44,6 +44,7 @@ function loadBinding() {
 }
 
 const SaxParser = loadBinding().SaxParser
+const { dispatchEvents } = require('./dispatch')
 
 inherits(SaxParser, EventEmitter)
 inherits(SaxParser, Stream)
@@ -68,9 +69,19 @@ function markListenersDirty() {
     SaxParser.prototype[method] = function () {
         const result = original.apply(this, arguments)
         markListenersDirty.call(this)
+        this._listenersDirty = true
         return result
     }
 })
+
+SaxParser.prototype._dispatchEvents = function (
+    xmlBuffer,
+    recordBuffer,
+    auxBuffer,
+    eventCount,
+) {
+    dispatchEvents(this, xmlBuffer, recordBuffer, auxBuffer, eventCount)
+}
 
 SaxParser.prototype.write = function (data) {
     if (data == null) {

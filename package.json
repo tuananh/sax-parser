@@ -15,6 +15,7 @@
   },
   "files": [
     "index.js",
+    "dispatch.js",
     "scripts/build-from-source.js",
     "binding.gyp",
     "src/**",

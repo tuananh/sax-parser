@@ -5,6 +5,7 @@
       "sources": [
         "src/binding.cpp",
         "src/native-emitter.cpp",
+        "src/event-collector.cpp",
         "src/sax-parser.cpp"
       ],
       'cflags!': [ '-fno-exceptions' ],
