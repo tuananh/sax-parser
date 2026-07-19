@@ -21,7 +21,7 @@ pnpm install @tuananh/sax-parser
 
 ## Benchmark
 
-[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document. Each parser registers noop `startElement`, `endElement`, and `text` handlers so the comparison includes event dispatch overhead.
+[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document. Each parser registers noop handlers that accept the usual event arguments so the comparison includes string decoding and dispatch overhead.
 
 ```sh
 npm run benchmark

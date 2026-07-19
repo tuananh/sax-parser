@@ -75,15 +75,13 @@ function markListenersDirty() {
 })
 
 SaxParser.prototype._dispatchEvents = function (
-    xmlBuffer,
+    xmlSource,
     recordBuffer,
     auxBuffer,
     eventCount,
-    errorCode,
-    errorOffset,
     compactRecords,
 ) {
-    dispatchEvents(this, xmlBuffer, recordBuffer, auxBuffer, eventCount, compactRecords)
+    dispatchEvents(this, xmlSource, recordBuffer, auxBuffer, eventCount, compactRecords)
 }
 
 SaxParser.prototype.write = function (data) {

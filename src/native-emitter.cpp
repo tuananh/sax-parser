@@ -158,18 +158,15 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
     if (eventCount == 0 && !_collector.hasError())
         return;
 
+    _collector.releaseInto(_dispatchRecords, _dispatchAux, eventCount);
+
     Napi::Value dispatchValue = _jsThis.Get("_dispatchEvents");
     if (!dispatchValue.IsFunction())
         return;
 
-    const uint32_t errorCode = _collector.errorCode();
-    const uint32_t errorOffset = _collector.errorOffset();
-    _collector.releaseInto(_dispatchRecords, _dispatchAux, eventCount);
-
     auto noopFinalizer = [](Napi::Env, void *) {};
 
-    Napi::Buffer<char> xmlBuffer =
-        Napi::Buffer<char>::New(env, const_cast<char *>(xmlData), xmlLength, noopFinalizer);
+    Napi::String xmlString = Napi::String::New(env, xmlData, xmlLength);
     Napi::Buffer<uint8_t> recordBuffer = Napi::Buffer<uint8_t>::New(
         env, _dispatchRecords.data(), _dispatchRecords.size(), noopFinalizer);
     Napi::Buffer<uint8_t> auxBuffer = Napi::Buffer<uint8_t>::New(
@@ -177,8 +174,7 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
 
     dispatchValue.As<Napi::Function>().Call(
         _jsThis.Value(),
-        {xmlBuffer, recordBuffer, auxBuffer, Napi::Number::New(env, static_cast<double>(eventCount)),
-         Napi::Number::New(env, errorCode), Napi::Number::New(env, errorOffset),
+        {xmlString, recordBuffer, auxBuffer, Napi::Number::New(env, static_cast<double>(eventCount)),
          Napi::Boolean::New(env, _registry->compactRecords())});
 }
 

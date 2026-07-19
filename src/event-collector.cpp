@@ -97,8 +97,8 @@ uint32_t EventCollector::pushAttributes(const char **attrs)
 
         writeU32(_aux, nameLen);
         writeU32(_aux, valueLen);
-        pushBytes(name, nameLen);
-        pushBytes(value, valueLen);
+        writeU32(_aux, xmlOffset(name));
+        writeU32(_aux, xmlOffset(value));
     }
 
     return blockOffset;

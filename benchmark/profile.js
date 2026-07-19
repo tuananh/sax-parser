@@ -43,7 +43,7 @@ time('no listeners', () => {
     parser.parse(xml)
 })
 
-// 2. Zero-arity noop listeners (benchmark scenario)
+// 2. Zero-arity noop listeners (fast path — skips argument decoding)
 time('noop listeners (0 arity)', () => {
     const parser = new SaxParser()
     const noop = function () {}

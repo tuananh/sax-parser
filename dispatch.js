@@ -87,14 +87,151 @@ function ensureListenerCache(parser) {
     return parser._listenerCache
 }
 
-function decodeSlice(buf, offset, length) {
-    if (length === 0) {
-        return ''
+function isAsciiBuffer(buffer) {
+    for (let i = 0, n = buffer.length; i < n; i++) {
+        if (buffer[i] >= 0x80) {
+            return false
+        }
     }
-    return buf.toString('utf8', offset, offset + length)
+    return true
 }
 
-function readAttributes(auxBuffer, offset) {
+function buildUtf8ByteIndexFromString(str) {
+    let byteIndex = 0
+    const index = new Uint32Array(str.length * 3 + 1)
+
+    for (let i = 0; i < str.length; ) {
+        index[byteIndex] = i
+        const code = str.charCodeAt(i)
+        if (code < 0x80) {
+            byteIndex += 1
+            i += 1
+        } else if (code < 0x800) {
+            byteIndex += 2
+            i += 1
+        } else if (code >= 0xd800 && code <= 0xdbff) {
+            byteIndex += 4
+            i += 2
+        } else {
+            byteIndex += 3
+            i += 1
+        }
+    }
+
+    index[byteIndex] = str.length
+    return index.subarray(0, byteIndex + 1)
+}
+
+function buildUtf8ByteIndex(buffer) {
+    const index = new Uint32Array(buffer.length + 1)
+    let stringIndex = 0
+    let i = 0
+
+    while (i < buffer.length) {
+        index[i] = stringIndex
+        const byte = buffer[i]
+        if (byte < 0x80) {
+            stringIndex += 1
+            i += 1
+        } else if ((byte & 0xe0) === 0xc0) {
+            stringIndex += 1
+            i += 2
+        } else if ((byte & 0xf0) === 0xe0) {
+            stringIndex += 1
+            i += 3
+        } else {
+            stringIndex += 2
+            i += 4
+        }
+    }
+
+    index[buffer.length] = stringIndex
+    return index
+}
+
+function createStringSliceDecoder(str) {
+    if (str.length === 0) {
+        return {
+            decode() {
+                return ''
+            },
+        }
+    }
+
+    let ascii = true
+    for (let i = 0; i < str.length; i++) {
+        if (str.charCodeAt(i) >= 0x80) {
+            ascii = false
+            break
+        }
+    }
+
+    if (ascii) {
+        return {
+            decode(offset, length) {
+                if (length === 0) {
+                    return ''
+                }
+                return str.slice(offset, offset + length)
+            },
+        }
+    }
+
+    const index = buildUtf8ByteIndexFromString(str)
+
+    return {
+        decode(offset, length) {
+            if (length === 0) {
+                return ''
+            }
+            return str.slice(index[offset], index[offset + length])
+        },
+    }
+}
+
+function createBufferSliceDecoder(buffer) {
+    if (buffer.length === 0) {
+        return {
+            decode() {
+                return ''
+            },
+        }
+    }
+
+    if (isAsciiBuffer(buffer)) {
+        const str = buffer.toString('ascii')
+        return {
+            decode(offset, length) {
+                if (length === 0) {
+                    return ''
+                }
+                return str.slice(offset, offset + length)
+            },
+        }
+    }
+
+    const str = buffer.toString('utf8')
+    const index = buildUtf8ByteIndex(buffer)
+
+    return {
+        decode(offset, length) {
+            if (length === 0) {
+                return ''
+            }
+            return str.slice(index[offset], index[offset + length])
+        },
+    }
+}
+
+function createSliceDecoder(source) {
+    if (typeof source === 'string') {
+        return createStringSliceDecoder(source)
+    }
+    return createBufferSliceDecoder(source)
+}
+
+
+function readAttributes(xmlDecoder, auxBuffer, offset) {
     const count = auxBuffer.readUInt32LE(offset)
     if (count === 0) {
         return EMPTY_ATTRS
@@ -108,11 +245,14 @@ function readAttributes(auxBuffer, offset) {
         cursor += 4
         const valueLen = auxBuffer.readUInt32LE(cursor)
         cursor += 4
-        const name = decodeSlice(auxBuffer, cursor, nameLen)
-        cursor += nameLen
-        const value = decodeSlice(auxBuffer, cursor, valueLen)
-        cursor += valueLen
-        attrs[name] = value
+        const nameOffset = auxBuffer.readUInt32LE(cursor)
+        cursor += 4
+        const valueOffset = auxBuffer.readUInt32LE(cursor)
+        cursor += 4
+        attrs[xmlDecoder.decode(nameOffset, nameLen)] = xmlDecoder.decode(
+            valueOffset,
+            valueLen,
+        )
     }
 
     return attrs
@@ -141,7 +281,15 @@ function callAll(listeners, receiver, args) {
     }
 }
 
-function dispatchCompactEvents(parser, recordBuffer, eventCount) {
+function recordWords(recordBuffer) {
+    return new Uint32Array(
+        recordBuffer.buffer,
+        recordBuffer.byteOffset,
+        recordBuffer.byteLength / 4,
+    )
+}
+
+function dispatchCompactEvents(parser, recordWords, eventCount) {
     const cache = ensureListenerCache(parser)
 
     const startDocument = cache.startDocument
@@ -162,7 +310,7 @@ function dispatchCompactEvents(parser, recordBuffer, eventCount) {
     const processingInstruction = cache.processingInstruction
 
     for (let i = 0; i < eventCount; i++) {
-        const type = recordBuffer.readUInt32LE(i * COMPACT_RECORD_BYTES)
+        const type = recordWords[i]
 
         switch (type) {
             case EVENT.START_DOCUMENT:
@@ -213,9 +361,9 @@ function dispatchCompactEvents(parser, recordBuffer, eventCount) {
     }
 }
 
-function dispatchEvents(parser, xmlBuffer, recordBuffer, auxBuffer, eventCount, compactRecords) {
+function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, compactRecords) {
     if (compactRecords) {
-        dispatchCompactEvents(parser, recordBuffer, eventCount)
+        dispatchCompactEvents(parser, recordWords(recordBuffer), eventCount)
         return
     }
 
@@ -248,13 +396,34 @@ function dispatchEvents(parser, xmlBuffer, recordBuffer, auxBuffer, eventCount, 
     const xmlDeclNeedsArgs = listenersNeedArgs(xmlDecl)
     const processingInstructionNeedsArgs = listenersNeedArgs(processingInstruction)
 
+    const needsStringDecode =
+        startElementNeedsArgs ||
+        endElementNeedsArgs ||
+        textNeedsArgs ||
+        cdataNeedsArgs ||
+        commentNeedsArgs ||
+        doctypeNeedsArgs ||
+        startAttributeNeedsArgs ||
+        xmlDeclNeedsArgs ||
+        processingInstructionNeedsArgs
+
+    let xmlDecoder
+    let auxDecoder
+    if (needsStringDecode) {
+        xmlDecoder = createSliceDecoder(xmlSource)
+        auxDecoder = createBufferSliceDecoder(auxBuffer)
+    }
+
+    const records = recordWords(recordBuffer)
+    const recordStride = RECORD_BYTES / 4
+
     for (let i = 0; i < eventCount; i++) {
-        const offset = i * RECORD_BYTES
-        const type = recordBuffer.readUInt32LE(offset)
-        const arg0 = recordBuffer.readUInt32LE(offset + 4)
-        const arg1 = recordBuffer.readUInt32LE(offset + 8)
-        const arg2 = recordBuffer.readUInt32LE(offset + 12)
-        const arg3 = recordBuffer.readUInt32LE(offset + 16)
+        const offset = i * recordStride
+        const type = records[offset]
+        const arg0 = records[offset + 1]
+        const arg1 = records[offset + 2]
+        const arg2 = records[offset + 3]
+        const arg3 = records[offset + 4]
 
         switch (type) {
             case EVENT.START_DOCUMENT:
@@ -269,8 +438,8 @@ function dispatchEvents(parser, xmlBuffer, recordBuffer, auxBuffer, eventCount, 
             case EVENT.START_ELEMENT:
                 if (startElementNeedsArgs) {
                     callAll(startElement, parser, [
-                        decodeSlice(xmlBuffer, arg0, arg1),
-                        readAttributes(auxBuffer, arg2),
+                        xmlDecoder.decode(arg0, arg1),
+                        readAttributes(xmlDecoder, auxBuffer, arg2),
                     ])
                 } else {
                     callAll(startElement, parser, [])
@@ -278,35 +447,35 @@ function dispatchEvents(parser, xmlBuffer, recordBuffer, auxBuffer, eventCount, 
                 break
             case EVENT.END_ELEMENT:
                 if (endElementNeedsArgs) {
-                    callAll(endElement, parser, [decodeSlice(xmlBuffer, arg0, arg1)])
+                    callAll(endElement, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
                     callAll(endElement, parser, [])
                 }
                 break
             case EVENT.TEXT:
                 if (textNeedsArgs) {
-                    callAll(text, parser, [decodeSlice(xmlBuffer, arg0, arg1)])
+                    callAll(text, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
                     callAll(text, parser, [])
                 }
                 break
             case EVENT.CDATA:
                 if (cdataNeedsArgs) {
-                    callAll(cdata, parser, [decodeSlice(xmlBuffer, arg0, arg1)])
+                    callAll(cdata, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
                     callAll(cdata, parser, [])
                 }
                 break
             case EVENT.COMMENT:
                 if (commentNeedsArgs) {
-                    callAll(comment, parser, [decodeSlice(xmlBuffer, arg0, arg1)])
+                    callAll(comment, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
                     callAll(comment, parser, [])
                 }
                 break
             case EVENT.DOCTYPE:
                 if (doctypeNeedsArgs) {
-                    callAll(doctype, parser, [decodeSlice(xmlBuffer, arg0, arg1)])
+                    callAll(doctype, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
                     callAll(doctype, parser, [])
                 }
@@ -322,7 +491,7 @@ function dispatchEvents(parser, xmlBuffer, recordBuffer, auxBuffer, eventCount, 
             case EVENT.START_ATTRIBUTE: {
                 if (startAttributeNeedsArgs) {
                     const attr = Object.create(null)
-                    attr[decodeSlice(auxBuffer, arg0, arg1)] = decodeSlice(auxBuffer, arg2, arg3)
+                    attr[auxDecoder.decode(arg0, arg1)] = auxDecoder.decode(arg2, arg3)
                     callAll(startAttribute, parser, [attr])
                 } else {
                     callAll(startAttribute, parser, [])
@@ -334,7 +503,7 @@ function dispatchEvents(parser, xmlBuffer, recordBuffer, auxBuffer, eventCount, 
                 break
             case EVENT.XML_DECL:
                 if (xmlDeclNeedsArgs) {
-                    callAll(xmlDecl, parser, [readAttributes(auxBuffer, arg2)])
+                    callAll(xmlDecl, parser, [readAttributes(xmlDecoder, auxBuffer, arg2)])
                 } else {
                     callAll(xmlDecl, parser, [])
                 }
@@ -343,8 +512,8 @@ function dispatchEvents(parser, xmlBuffer, recordBuffer, auxBuffer, eventCount, 
                 if (processingInstructionNeedsArgs) {
                     callAll(processingInstruction, parser, [
                         {
-                            target: decodeSlice(auxBuffer, arg0, arg1),
-                            instruction: decodeSlice(auxBuffer, arg2, arg3),
+                            target: auxDecoder.decode(arg0, arg1),
+                            instruction: auxDecoder.decode(arg2, arg3),
                         },
                     ])
                 } else {
