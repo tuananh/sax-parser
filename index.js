@@ -79,8 +79,11 @@ SaxParser.prototype._dispatchEvents = function (
     recordBuffer,
     auxBuffer,
     eventCount,
+    errorCode,
+    errorOffset,
+    compactRecords,
 ) {
-    dispatchEvents(this, xmlBuffer, recordBuffer, auxBuffer, eventCount)
+    dispatchEvents(this, xmlBuffer, recordBuffer, auxBuffer, eventCount, compactRecords)
 }
 
 SaxParser.prototype.write = function (data) {

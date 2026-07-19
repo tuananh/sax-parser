@@ -14,6 +14,7 @@ public:
     void markListenersDirty();
     void beginParse(saxparser::SAXParser *parser);
     bool hasAnyListeners() const { return _flags.hasAnyListeners; }
+    bool compactRecords() const { return saxparser::useCompactRecords(_flags); }
     const ListenerFlags &flags() const { return _flags; }
 
 private:

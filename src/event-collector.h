@@ -30,6 +30,7 @@ enum CollectedEventType : uint32_t
 enum CollectedRecord
 {
     kCollectedRecordBytes = 20,
+    kCompactRecordBytes = 4,
 };
 
 class EventCollector
@@ -37,6 +38,8 @@ class EventCollector
 public:
     void clear();
     void setXmlBase(const char *base) { _xmlBase = base; }
+    void setCompactRecords(bool compact) { _compactRecords = compact; }
+    bool compactRecords() const { return _compactRecords; }
 
     void pushEvent(uint32_t type, uint32_t arg0, uint32_t arg1, uint32_t arg2 = 0,
                    uint32_t arg3 = 0);
@@ -63,6 +66,7 @@ private:
     const char *_xmlBase;
     uint32_t _errorCode;
     uint32_t _errorOffset;
+    bool _compactRecords;
 
     void writeU32(std::vector<uint8_t> &buf, uint32_t value);
 };
@@ -94,6 +98,7 @@ public:
 
 private:
     EventCollector *_collector;
+    bool _compactRecords;
     bool _collectStartElementAttrs;
     bool _collectXmlDeclAttrs;
 
@@ -108,6 +113,7 @@ struct ListenerFlags
     bool endElement;
     bool endElementNeedsArgs;
     bool startAttribute;
+    bool startAttributeNeedsArgs;
     bool endAttribute;
     bool text;
     bool textNeedsArgs;
@@ -123,7 +129,9 @@ struct ListenerFlags
     bool doctype;
     bool doctypeNeedsArgs;
     bool error;
+    bool errorNeedsArgs;
     bool startXmlDeclAttr;
+    bool startXmlDeclAttrNeedsArgs;
     bool endXmlDeclAttr;
     bool xmlDecl;
     bool xmlDeclNeedsArgs;
@@ -132,6 +140,7 @@ struct ListenerFlags
 };
 
 SAXEventNeeds eventNeedsFromFlags(const ListenerFlags &flags);
+bool useCompactRecords(const ListenerFlags &flags);
 
 } // namespace saxparser
 

@@ -27,6 +27,7 @@ void EventCollector::clear()
     _xmlBase = nullptr;
     _errorCode = 0;
     _errorOffset = 0;
+    _compactRecords = false;
 }
 
 void EventCollector::writeU32(std::vector<uint8_t> &buf, uint32_t value)
@@ -53,10 +54,13 @@ void EventCollector::pushEvent(uint32_t type, uint32_t arg0, uint32_t arg1, uint
                                uint32_t arg3)
 {
     writeU32(_records, type);
-    writeU32(_records, arg0);
-    writeU32(_records, arg1);
-    writeU32(_records, arg2);
-    writeU32(_records, arg3);
+    if (!_compactRecords)
+    {
+        writeU32(_records, arg0);
+        writeU32(_records, arg1);
+        writeU32(_records, arg2);
+        writeU32(_records, arg3);
+    }
     _eventCount++;
 }
 
@@ -123,8 +127,18 @@ SAXEventNeeds eventNeedsFromFlags(const ListenerFlags &flags)
     return needs;
 }
 
+bool useCompactRecords(const ListenerFlags &flags)
+{
+    return !flags.startElementNeedsArgs && !flags.endElementNeedsArgs && !flags.textNeedsArgs &&
+           !flags.cdataNeedsArgs && !flags.commentNeedsArgs && !flags.doctypeNeedsArgs &&
+           !flags.xmlDeclNeedsArgs && !flags.processingInstructionNeedsArgs &&
+           !flags.startAttributeNeedsArgs && !flags.errorNeedsArgs &&
+           !flags.startXmlDeclAttrNeedsArgs;
+}
+
 CollectingSAXDelegator::CollectingSAXDelegator(EventCollector *collector)
-    : _collector(collector), _collectStartElementAttrs(false), _collectXmlDeclAttrs(false)
+    : _collector(collector), _compactRecords(false), _collectStartElementAttrs(false),
+      _collectXmlDeclAttrs(false)
 {
 }
 
@@ -132,14 +146,21 @@ void CollectingSAXDelegator::beginParse(SAXParser *parser)
 {
     parser->setEmitEvents(true);
     parser->setEmitPerAttributeEvents(false, false);
-    _collectStartElementAttrs = parser->eventNeeds().startElementAttributes;
-    _collectXmlDeclAttrs = parser->eventNeeds().xmlDeclAttributes;
+    _compactRecords = _collector != nullptr && _collector->compactRecords();
+    _collectStartElementAttrs = !_compactRecords && parser->eventNeeds().startElementAttributes;
+    _collectXmlDeclAttrs = !_compactRecords && parser->eventNeeds().xmlDeclAttributes;
 }
 
 void CollectingSAXDelegator::pushSlice(uint32_t type, const char *data, size_t len)
 {
     if (_collector == nullptr || data == nullptr)
         return;
+
+    if (_compactRecords)
+    {
+        _collector->pushEvent(type, 0, 0);
+        return;
+    }
 
     size_t sliceLen = len;
     // xsxml null-terminates comment content but the reported length can be short by 1–2 bytes.
@@ -170,6 +191,12 @@ void CollectingSAXDelegator::startElement(void *ctx, const char *name, const cha
     if (_collector == nullptr)
         return;
 
+    if (_compactRecords)
+    {
+        _collector->pushEvent(kCollectedStartElement, 0, 0);
+        return;
+    }
+
     const uint32_t attrOffset =
         _collectStartElementAttrs ? _collector->pushAttributes(attrs) : 0;
     _collector->pushEvent(kCollectedStartElement, _collector->xmlOffset(name),
@@ -186,6 +213,12 @@ void CollectingSAXDelegator::startAttribute(void *ctx, const char *name, size_t 
 {
     if (_collector == nullptr)
         return;
+
+    if (_compactRecords)
+    {
+        _collector->pushEvent(kCollectedStartAttribute, 0, 0);
+        return;
+    }
 
     const uint32_t nameOffset = _collector->pushBytes(name, nameLen);
     const uint32_t valueOffset = _collector->pushBytes(value, valueLen);
@@ -225,6 +258,12 @@ void CollectingSAXDelegator::errorHandler(void *ctx, xsxml::xml_parse_status sta
         return;
 
     _collector->setError(static_cast<uint32_t>(status), static_cast<uint32_t>(offset));
+    if (_compactRecords)
+    {
+        _collector->pushEvent(kCollectedError, 0, 0);
+        return;
+    }
+
     _collector->pushEvent(kCollectedError, static_cast<uint32_t>(status),
                           static_cast<uint32_t>(offset));
 }
@@ -245,6 +284,12 @@ void CollectingSAXDelegator::xmlDeclarationHandler(void *ctx, const char **attrs
     if (_collector == nullptr)
         return;
 
+    if (_compactRecords)
+    {
+        _collector->pushEvent(kCollectedXmlDecl, 0, 0);
+        return;
+    }
+
     const uint32_t attrOffset = _collectXmlDeclAttrs ? _collector->pushAttributes(attrs) : 0;
     _collector->pushEvent(kCollectedXmlDecl, 0, 0, attrOffset, 0);
 }
@@ -254,6 +299,12 @@ void CollectingSAXDelegator::piHandler(void *ctx, const char *target, size_t tar
 {
     if (_collector == nullptr)
         return;
+
+    if (_compactRecords)
+    {
+        _collector->pushEvent(kCollectedProcessingInstruction, 0, 0);
+        return;
+    }
 
     const uint32_t targetOffset = _collector->pushBytes(target, targetLen);
     const uint32_t instructionOffset = _collector->pushBytes(instruction, instructionLen);

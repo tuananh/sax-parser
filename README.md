@@ -31,17 +31,17 @@ Results on Node.js v26.5.0, Linux x64:
 
 | module              | ops/sec | native | XML compliant | stream |
 | ------------------- | ------- | ------ | ------------- | ------ |
-| easysax             | 12,976  | ❌     | ✅            | ✅     |
-| @tuananh/sax-parser | 8,718   | ✅     | ✅            | ✅     |
-| saxophone           | 7,539   | ❌     | ✅            | ✅     |
-| ltx                 | 3,904   | ❌     | ❌            | ✅     |
-| sax                 | 1,527   | ❌     | ✅            | ✅     |
-| node-expat          | 1,201   | ✅     | ✅            | ✅     |
-| node-xml            | 753     | ❌     | ✅            | ✅     |
+| @tuananh/sax-parser | 16,962  | ✅     | ✅            | ✅     |
+| easysax             | 11,126  | ❌     | ✅            | ✅     |
+| saxophone           | 7,543   | ❌     | ✅            | ✅     |
+| ltx                 | 3,853   | ❌     | ❌            | ✅     |
+| sax                 | 1,551   | ❌     | ✅            | ✅     |
+| node-expat          | 1,200   | ✅     | ✅            | ✅     |
+| node-xml            | 759     | ❌     | ✅            | ✅     |
 
 ops/sec: higher is better.
 
-`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` ranks second in this comparison, ahead of other native parsers (`node-expat`) and pure-JS options like `sax`, while supporting streaming and full XML compliance.
+`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` is the fastest in this comparison while remaining a native parser with streaming and full XML compliance.
 
 ## Usage
 

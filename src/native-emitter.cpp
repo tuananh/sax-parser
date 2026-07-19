@@ -110,16 +110,18 @@ void ListenerRegistry::refreshFlags()
     setListenerFlag(listeners, "xmlDecl", _flags.xmlDecl, _flags.xmlDeclNeedsArgs);
     setListenerFlag(listeners, "processingInstruction", _flags.processingInstruction,
                     _flags.processingInstructionNeedsArgs);
+    setListenerFlag(listeners, "startAttribute", _flags.startAttribute,
+                    _flags.startAttributeNeedsArgs);
+    setListenerFlag(listeners, "error", _flags.error, _flags.errorNeedsArgs);
+    setListenerFlag(listeners, "startXmlDeclAttr", _flags.startXmlDeclAttr,
+                    _flags.startXmlDeclAttrNeedsArgs);
 
-    _flags.startAttribute = listeners.Has("startAttribute");
     _flags.endAttribute = listeners.Has("endAttribute");
     _flags.startDocument = listeners.Has("startDocument");
     _flags.endDocument = listeners.Has("endDocument");
     _flags.end = listeners.Has("end");
     _flags.finish = listeners.Has("finish");
     _flags.done = listeners.Has("done");
-    _flags.error = listeners.Has("error");
-    _flags.startXmlDeclAttr = listeners.Has("startXmlDeclAttr");
     _flags.endXmlDeclAttr = listeners.Has("endXmlDeclAttr");
 }
 
@@ -176,7 +178,8 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
     dispatchValue.As<Napi::Function>().Call(
         _jsThis.Value(),
         {xmlBuffer, recordBuffer, auxBuffer, Napi::Number::New(env, static_cast<double>(eventCount)),
-         Napi::Number::New(env, errorCode), Napi::Number::New(env, errorOffset)});
+         Napi::Number::New(env, errorCode), Napi::Number::New(env, errorOffset),
+         Napi::Boolean::New(env, _registry->compactRecords())});
 }
 
 void SaxParser::runParse(char *xmlData, size_t xmlLength)
@@ -190,6 +193,7 @@ void SaxParser::runParse(char *xmlData, size_t xmlLength)
     }
 
     _collector.clear();
+    _collector.setCompactRecords(_registry->compactRecords());
     _collector.setXmlBase(xmlData);
     _collectingDelegator.beginParse(_parser.get());
     _parser->parseMutable(xmlData, xmlLength);
@@ -212,19 +216,21 @@ void SaxParser::runFeed(const char *xmlData, size_t xmlLength, bool flush)
     if (!flush)
         return;
 
-    _collectingDelegator.beginParse(_parser.get());
-
     if (_feedXml.empty())
     {
         _collector.clear();
+        _collector.setCompactRecords(_registry->compactRecords());
         _collector.setXmlBase("");
+        _collectingDelegator.beginParse(_parser.get());
         _parser->feed(nullptr, 0, true);
         dispatchCollected(_jsThis.Env(), "", 0);
         return;
     }
 
     _collector.clear();
+    _collector.setCompactRecords(_registry->compactRecords());
     _collector.setXmlBase(_feedXml.data());
+    _collectingDelegator.beginParse(_parser.get());
     _parser->parseMutable(_feedXml.data(), _feedXml.size());
     _parseInput.assign(_feedXml.begin(), _feedXml.end());
     _feedXml.clear();

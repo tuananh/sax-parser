@@ -17,6 +17,7 @@ const EVENT = {
 }
 
 const RECORD_BYTES = 20
+const COMPACT_RECORD_BYTES = 4
 
 const ERROR_CODES = {
     0: 'OK',
@@ -140,7 +141,84 @@ function callAll(listeners, receiver, args) {
     }
 }
 
-function dispatchEvents(parser, xmlBuffer, recordBuffer, auxBuffer, eventCount) {
+function dispatchCompactEvents(parser, recordBuffer, eventCount) {
+    const cache = ensureListenerCache(parser)
+
+    const startDocument = cache.startDocument
+    const endDocument = cache.endDocument
+    const end = cache.end
+    const finish = cache.finish
+    const done = cache.done
+    const startElement = cache.startElement
+    const endElement = cache.endElement
+    const text = cache.text
+    const cdata = cache.cdata
+    const comment = cache.comment
+    const doctype = cache.doctype
+    const error = cache.error
+    const startAttribute = cache.startAttribute
+    const endAttribute = cache.endAttribute
+    const xmlDecl = cache.xmlDecl
+    const processingInstruction = cache.processingInstruction
+
+    for (let i = 0; i < eventCount; i++) {
+        const type = recordBuffer.readUInt32LE(i * COMPACT_RECORD_BYTES)
+
+        switch (type) {
+            case EVENT.START_DOCUMENT:
+                callAll(startDocument, parser, [])
+                break
+            case EVENT.END_DOCUMENT:
+                if (endDocument.length) callAll(endDocument, parser, [])
+                if (end.length) callAll(end, parser, [])
+                if (finish.length) callAll(finish, parser, [])
+                if (done.length) callAll(done, parser, [])
+                break
+            case EVENT.START_ELEMENT:
+                callAll(startElement, parser, [])
+                break
+            case EVENT.END_ELEMENT:
+                callAll(endElement, parser, [])
+                break
+            case EVENT.TEXT:
+                callAll(text, parser, [])
+                break
+            case EVENT.CDATA:
+                callAll(cdata, parser, [])
+                break
+            case EVENT.COMMENT:
+                callAll(comment, parser, [])
+                break
+            case EVENT.DOCTYPE:
+                callAll(doctype, parser, [])
+                break
+            case EVENT.ERROR:
+                callAll(error, parser, [])
+                break
+            case EVENT.START_ATTRIBUTE:
+                callAll(startAttribute, parser, [])
+                break
+            case EVENT.END_ATTRIBUTE:
+                callAll(endAttribute, parser, [])
+                break
+            case EVENT.XML_DECL:
+                callAll(xmlDecl, parser, [])
+                break
+            case EVENT.PROCESSING_INSTRUCTION:
+                callAll(processingInstruction, parser, [])
+                break
+            default:
+                break
+        }
+    }
+}
+
+function dispatchEvents(parser, xmlBuffer, recordBuffer, auxBuffer, eventCount, compactRecords) {
+    if (compactRecords) {
+        dispatchCompactEvents(parser, recordBuffer, eventCount)
+        return
+    }
+
     const cache = ensureListenerCache(parser)
 
     const startDocument = cache.startDocument
