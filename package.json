@@ -7,7 +7,8 @@
     "test": "cross-env NODE_OPTIONS=\"--expose-gc\" jest",
     "build": "node-gyp rebuild",
     "install": "node scripts/build-from-source.js",
-    "benchmark": "node benchmark",
+    "benchmark": "node benchmark/index.mjs",
+    "benchmark:streaming": "node benchmark/streaming.mjs",
     "fmt": "prettier --write **/*.js index.js",
     "create-npm-dirs": "node scripts/create-npm-dirs.js",
     "artifacts": "node scripts/collect-artifacts.js",
@@ -45,6 +46,7 @@
     "node-addon-api": "^8.9.0"
   },
   "devDependencies": {
+    "@eksml/xml": "^0.1.5",
     "benchmark": "^2.1.4",
     "cross-env": "^10.1.0",
     "easysax": "^0.4.2",
@@ -57,7 +59,7 @@
     "node-xml": "^1.0.2",
     "prettier": "^3.9.5",
     "sax": "^1.6.0",
-    "saxophone": "^0.1.2"
+    "saxophone": "^0.8.0"
   },
   "engines": {
     "node": ">= 18"
