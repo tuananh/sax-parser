@@ -8,9 +8,11 @@ namespace saxparser
 void EventCollector::releaseInto(std::vector<uint8_t> &records, std::vector<uint8_t> &aux,
                                  size_t &eventCount)
 {
-    records = std::move(_records);
-    aux = std::move(_aux);
     eventCount = _eventCount;
+    // Swap keeps capacity on the collector for the next parse (the previous
+    // dispatch buffers come back empty-but-reserved after clear).
+    records.swap(_records);
+    aux.swap(_aux);
     _records.clear();
     _aux.clear();
     _eventCount = 0;
@@ -25,7 +27,8 @@ void EventCollector::clear()
     _errorCode = 0;
     _errorOffset = 0;
     _compactRecords = false;
-    _batchCallback = nullptr;
+    // Keep _batchCallback installed — rebinding std::function every parse
+    // allocates on the cold path.
     _batchSize = kDefaultBatchSize;
 }
 
@@ -75,13 +78,25 @@ void EventCollector::setError(uint32_t code, uint32_t offset)
 void EventCollector::pushEvent(uint32_t type, uint32_t arg0, uint32_t arg1, uint32_t arg2,
                                uint32_t arg3)
 {
-    writeU32(_records, type);
-    if (!_compactRecords)
+    if (_compactRecords)
     {
-        writeU32(_records, arg0);
-        writeU32(_records, arg1);
-        writeU32(_records, arg2);
-        writeU32(_records, arg3);
+        writeU32(_records, type);
+    }
+    else
+    {
+        const size_t bytes = sizeof(uint32_t) * 5;
+        const size_t base = _records.size();
+        _records.resize(base + bytes);
+        uint8_t *p = _records.data() + base;
+        auto putU32 = [&p](uint32_t value) {
+            std::memcpy(p, &value, sizeof(value));
+            p += sizeof(value);
+        };
+        putU32(type);
+        putU32(arg0);
+        putU32(arg1);
+        putU32(arg2);
+        putU32(arg3);
     }
     _eventCount++;
     maybeFlushBatch();
@@ -99,7 +114,7 @@ uint32_t EventCollector::pushBytes(const void *data, size_t len)
     return offset;
 }
 
-uint32_t EventCollector::pushAttributes(const char **attrs)
+uint32_t EventCollector::pushAttributes(const char **attrs, const uint32_t *lens)
 {
     uint32_t count = 0;
     if (attrs != nullptr)
@@ -114,19 +129,30 @@ uint32_t EventCollector::pushAttributes(const char **attrs)
         return 0xffffffffu;
 
     const uint32_t blockOffset = static_cast<uint32_t>(_aux.size());
-    writeU32(_aux, count);
+    const size_t bytes = sizeof(uint32_t) * (1u + count * 4u);
+    const size_t base = _aux.size();
+    _aux.resize(base + bytes);
 
+    uint8_t *p = _aux.data() + base;
+    auto putU32 = [&p](uint32_t value) {
+        std::memcpy(p, &value, sizeof(value));
+        p += sizeof(value);
+    };
+
+    putU32(count);
     for (uint32_t i = 0; i < count; i++)
     {
         const char *name = attrs[i * 2];
         const char *value = attrs[i * 2 + 1];
-        const uint32_t nameLen = static_cast<uint32_t>(std::strlen(name));
-        const uint32_t valueLen = static_cast<uint32_t>(std::strlen(value));
+        const uint32_t nameLen =
+            lens != nullptr ? lens[i * 2] : static_cast<uint32_t>(std::strlen(name));
+        const uint32_t valueLen =
+            lens != nullptr ? lens[i * 2 + 1] : static_cast<uint32_t>(std::strlen(value));
 
-        writeU32(_aux, nameLen);
-        writeU32(_aux, valueLen);
-        writeU32(_aux, xmlOffset(name));
-        writeU32(_aux, xmlOffset(value));
+        putU32(nameLen);
+        putU32(valueLen);
+        putU32(xmlOffset(name));
+        putU32(xmlOffset(value));
     }
 
     return blockOffset;
@@ -136,7 +162,7 @@ SAXEventNeeds eventNeedsFromFlags(const ListenerFlags &flags)
 {
     SAXEventNeeds needs;
     needs.startElement = flags.startElement;
-    needs.startElementAttributes = flags.startElement && flags.startElementNeedsArgs;
+    needs.startElementAttributes = flags.startElement && flags.startElementNeedsAttrs;
     needs.endElement = flags.endElement;
     needs.startAttribute = flags.startAttribute;
     needs.endAttribute = flags.endAttribute;
@@ -214,7 +240,8 @@ void CollectingSAXDelegator::endDocument(void *ctx)
         _collector->pushEvent(kCollectedEndDocument, 0, 0);
 }
 
-void CollectingSAXDelegator::startElement(void *ctx, const char *name, const char **attrs)
+void CollectingSAXDelegator::startElement(void *ctx, const char *name, size_t nameLen,
+                                          const char **attrs)
 {
     if (_collector == nullptr)
         return;
@@ -225,10 +252,14 @@ void CollectingSAXDelegator::startElement(void *ctx, const char *name, const cha
         return;
     }
 
+    const uint32_t *lens = nullptr;
+    if (_collectStartElementAttrs && ctx != nullptr)
+        lens = static_cast<SAXParser *>(ctx)->attrLensData();
+
     const uint32_t attrOffset =
-        _collectStartElementAttrs ? _collector->pushAttributes(attrs) : 0;
+        _collectStartElementAttrs ? _collector->pushAttributes(attrs, lens) : 0;
     _collector->pushEvent(kCollectedStartElement, _collector->xmlOffset(name),
-                          static_cast<uint32_t>(std::strlen(name)), attrOffset, 0);
+                          static_cast<uint32_t>(nameLen), attrOffset, 0);
 }
 
 void CollectingSAXDelegator::endElement(void *ctx, const char *name, size_t len)
@@ -318,7 +349,12 @@ void CollectingSAXDelegator::xmlDeclarationHandler(void *ctx, const char **attrs
         return;
     }
 
-    const uint32_t attrOffset = _collectXmlDeclAttrs ? _collector->pushAttributes(attrs) : 0;
+    const uint32_t *lens = nullptr;
+    if (_collectXmlDeclAttrs && ctx != nullptr)
+        lens = static_cast<SAXParser *>(ctx)->attrLensData();
+
+    const uint32_t attrOffset =
+        _collectXmlDeclAttrs ? _collector->pushAttributes(attrs, lens) : 0;
     _collector->pushEvent(kCollectedXmlDecl, 0, 0, attrOffset, 0);
 }
 

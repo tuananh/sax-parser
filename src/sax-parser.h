@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "../vendor/xsxml/xsxml/no-recursive/xsxml.hpp"
 
@@ -41,7 +42,7 @@ class SAXDelegator
 {
 public:
     virtual ~SAXDelegator() {}
-    virtual void startElement(void *ctx, const char *name, const char **attrs) = 0;
+    virtual void startElement(void *ctx, const char *name, size_t nameLen, const char **attrs) = 0;
     virtual void endElement(void *ctx, const char *name, size_t len) = 0;
     virtual void startAttribute(void *ctx, const char *name, size_t nameLen,
                                 const char *value, size_t valueLen) = 0;
@@ -95,6 +96,7 @@ class SAXParser
     SAX2Hander *_saxHandler;
     std::string _parseBuffer;
     char *_parseBase;
+    std::vector<uint32_t> _attrLens;
 
 public:
     SAXParser();
@@ -120,6 +122,20 @@ public:
     {
         return _eventNeeds.xmlDeclAttributes;
     }
+
+    // Lengths captured from xsxml attr callbacks (nameLen, valueLen pairs).
+    // Avoids strlen when packing attributes into the event aux buffer.
+    void clearAttrLens() { _attrLens.clear(); }
+    void pushAttrLens(uint32_t nameLen, uint32_t valueLen)
+    {
+        _attrLens.push_back(nameLen);
+        _attrLens.push_back(valueLen);
+    }
+    const uint32_t *attrLensData() const
+    {
+        return _attrLens.empty() ? nullptr : _attrLens.data();
+    }
+
     static void startElement(void *ctx, const XML_CHAR *name,
                              const XML_CHAR **atts);
     static void endElement(void *ctx, const XML_CHAR *name, size_t len);

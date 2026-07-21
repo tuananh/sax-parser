@@ -9,10 +9,21 @@ using namespace saxparser;
 namespace
 {
 
+// Typical document batch sizes — reserve on first collect, keep via releaseInto swap.
+constexpr size_t kRecordBytesReserve = 16 * 1024;
+constexpr size_t kAuxBytesReserve = 16 * 1024;
+
 bool functionNeedsArgs(const Napi::Function &fn)
 {
     Napi::Value length = fn.Get("length");
     return length.IsNumber() && length.As<Napi::Number>().Int32Value() > 0;
+}
+
+// startElement(name, attrs) — attribute objects only when arity >= 2.
+bool functionNeedsAttrs(const Napi::Function &fn)
+{
+    Napi::Value length = fn.Get("length");
+    return length.IsNumber() && length.As<Napi::Number>().Int32Value() >= 2;
 }
 
 bool listenersNeedArgs(const Napi::Value &value)
@@ -38,11 +49,69 @@ bool listenersNeedArgs(const Napi::Value &value)
     return false;
 }
 
+bool listenersNeedAttrs(const Napi::Value &value)
+{
+    if (value.IsUndefined() || value.IsNull())
+        return false;
+
+    if (value.IsFunction())
+        return functionNeedsAttrs(value.As<Napi::Function>());
+
+    if (value.IsArray())
+    {
+        Napi::Array arr = value.As<Napi::Array>();
+        const uint32_t length = arr.Length();
+        for (uint32_t i = 0; i < length; i++)
+        {
+            Napi::Value item = arr[i];
+            if (item.IsFunction() && functionNeedsAttrs(item.As<Napi::Function>()))
+                return true;
+        }
+    }
+
+    return false;
+}
+
 void setListenerFlag(Napi::Object &listeners, const char *name, bool &registered, bool &needsArgs)
 {
     Napi::Value value = listeners.Get(name);
     registered = !value.IsUndefined() && !value.IsNull();
     needsArgs = registered && listenersNeedArgs(value);
+}
+
+// Copy a JS string into `out`. Reuses `out` capacity when large enough
+// (warm/reuse path); otherwise falls back to Utf8Value (one pass, one alloc)
+// which is faster than a two-pass write on a cold empty buffer.
+void copyJsStringUtf8(Napi::Env env, const Napi::String &str, std::string &out)
+{
+    size_t length = 0;
+    napi_status status = napi_get_value_string_utf8(env, str, nullptr, 0, &length);
+    if (status != napi_ok)
+    {
+        out = str.Utf8Value();
+        return;
+    }
+
+    if (length == 0)
+    {
+        out.clear();
+        return;
+    }
+
+    if (out.capacity() < length)
+    {
+        out = str.Utf8Value();
+        return;
+    }
+
+    out.resize(length + 1);
+    status = napi_get_value_string_utf8(env, str, &out[0], length + 1, &length);
+    if (status != napi_ok)
+    {
+        out = str.Utf8Value();
+        return;
+    }
+    out.resize(length);
 }
 
 } // namespace
@@ -79,6 +148,12 @@ SaxParser::SaxParser(const Napi::CallbackInfo &info)
 {
     _parser->init("UTF-8");
     _parser->setDelegator(&_collectingDelegator);
+
+    // Install once — rebinding std::function every parse allocates.
+    _collector.setBatchCallback([this]() { flushEventBatch(); });
+    // Prototype methods are already visible; cache Persistent refs now so the
+    // first flush does not pay three JS property lookups.
+    ensureDispatchFns();
 }
 
 SaxParser::~SaxParser() {}
@@ -106,6 +181,8 @@ void ListenerRegistry::refreshFlags()
     _flags.hasAnyListeners = true;
     setListenerFlag(listeners, "startElement", _flags.startElement,
                     _flags.startElementNeedsArgs);
+    _flags.startElementNeedsAttrs =
+        _flags.startElement && listenersNeedAttrs(listeners.Get("startElement"));
     setListenerFlag(listeners, "endElement", _flags.endElement, _flags.endElementNeedsArgs);
     setListenerFlag(listeners, "text", _flags.text, _flags.textNeedsArgs);
     setListenerFlag(listeners, "cdata", _flags.cdata, _flags.cdataNeedsArgs);
@@ -151,18 +228,20 @@ void ListenerRegistry::beginParse(SAXParser *parser)
 void SaxParser::MarkListenersDirty(const Napi::CallbackInfo &info)
 {
     _registry->markListenersDirty();
+    // Listeners may be the first touch after construct — keep dispatch fns hot.
+    ensureDispatchFns();
 }
 
 void SaxParser::beginEventCollection(const char *xmlBase, size_t xmlLength)
 {
     _collector.clear();
-    _collector.reserve(8192, 16384);
+    _collector.reserve(kRecordBytesReserve, kAuxBytesReserve);
     _collector.setCompactRecords(_registry->compactRecords());
     _collector.setXmlBase(xmlBase);
     _xmlDispatchBase = xmlBase;
     _xmlDispatchLength = xmlLength;
     _collectingDelegator.beginParse(_parser.get());
-    _collector.setBatchCallback([this]() { flushEventBatch(); });
+    // Batch callback is installed once in the constructor.
 }
 
 void SaxParser::flushEventBatch()
@@ -181,7 +260,6 @@ void SaxParser::flushEventBatch()
 void SaxParser::finishEventCollection(Napi::Env env)
 {
     flushEventBatch();
-    _collector.clearBatchCallback();
     _xmlBufferRef.Reset();
 }
 
@@ -453,7 +531,7 @@ void SaxParser::Parse(const Napi::CallbackInfo &info)
 
     if (info[0].IsString())
     {
-        _parseInput = info[0].As<Napi::String>().Utf8Value();
+        copyJsStringUtf8(info.Env(), info[0].As<Napi::String>(), _parseInput);
         runParse(&_parseInput[0], _parseInput.size());
     }
     else
@@ -494,7 +572,7 @@ void SaxParser::Feed(const Napi::CallbackInfo &info)
 
     if (info[0].IsString())
     {
-        _parseInput = info[0].As<Napi::String>().Utf8Value();
+        copyJsStringUtf8(info.Env(), info[0].As<Napi::String>(), _parseInput);
         runFeed(_parseInput.c_str(), _parseInput.size(), flush);
     }
     else

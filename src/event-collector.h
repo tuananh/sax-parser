@@ -57,7 +57,7 @@ public:
     void pushEvent(uint32_t type, uint32_t arg0, uint32_t arg1, uint32_t arg2 = 0,
                    uint32_t arg3 = 0);
     uint32_t pushBytes(const void *data, size_t len);
-    uint32_t pushAttributes(const char **attrs);
+    uint32_t pushAttributes(const char **attrs, const uint32_t *lens = nullptr);
 
     uint32_t xmlOffset(const char *ptr) const;
 
@@ -65,6 +65,8 @@ public:
     const std::vector<uint8_t> &aux() const { return _aux; }
     size_t eventCount() const { return _eventCount; }
 
+    // Move collected buffers into `records`/`aux` for JS Buffer views, while
+    // preserving capacity on both sides via swap (avoids re-reserve on reuse).
     void releaseInto(std::vector<uint8_t> &records, std::vector<uint8_t> &aux, size_t &eventCount);
 
     void setError(uint32_t code, uint32_t offset);
@@ -75,13 +77,13 @@ public:
 private:
     std::vector<uint8_t> _records;
     std::vector<uint8_t> _aux;
-    size_t _eventCount;
-    const char *_xmlBase;
-    uint32_t _errorCode;
-    uint32_t _errorOffset;
-    bool _compactRecords;
+    size_t _eventCount = 0;
+    const char *_xmlBase = nullptr;
+    uint32_t _errorCode = 0;
+    uint32_t _errorOffset = 0;
+    bool _compactRecords = false;
     BatchCallback _batchCallback;
-    size_t _batchSize;
+    size_t _batchSize = kDefaultBatchSize;
 
     void writeU32(std::vector<uint8_t> &buf, uint32_t value);
     void maybeFlushBatch();
@@ -94,7 +96,7 @@ public:
 
     void beginParse(SAXParser *parser);
 
-    void startElement(void *ctx, const char *name, const char **attrs) override;
+    void startElement(void *ctx, const char *name, size_t nameLen, const char **attrs) override;
     void endElement(void *ctx, const char *name, size_t len) override;
     void startAttribute(void *ctx, const char *name, size_t nameLen,
                         const char *value, size_t valueLen) override;
@@ -126,6 +128,9 @@ struct ListenerFlags
     bool hasAnyListeners;
     bool startElement;
     bool startElementNeedsArgs;
+    // True when any startElement listener has arity >= 2 (name, attrs).
+    // Arity 1 only needs the element name — skip attribute collection.
+    bool startElementNeedsAttrs;
     bool endElement;
     bool endElementNeedsArgs;
     bool startAttribute;

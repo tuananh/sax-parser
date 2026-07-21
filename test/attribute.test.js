@@ -1,3 +1,4 @@
+const SaxParser = require('..')
 const parse = require('.')
 
 describe('attribute test', () => {
@@ -8,6 +9,53 @@ describe('attribute test', () => {
             ['text', 'world'],
             ['endElement', 'hello'],
         ])
+    })
+
+    test('attrs object is null-prototype (no __proto__ pollution)', async () => {
+        const xml = '<hello __proto__="polluted" other="ok"/>'
+        const events = await parse(xml)
+        const attrs = events[0][2]
+        expect(Object.getPrototypeOf(attrs)).toBe(null)
+        expect(attrs.__proto__).toBe('polluted')
+        expect(attrs.other).toBe('ok')
+        expect({}.polluted).toBeUndefined()
+    })
+
+    test('arity-1 startElement receives name only (consistent with invokeSlot)', () => {
+        const xml = '<item id="1"><name>x</name></item>'
+        const parser = new SaxParser()
+        const starts = []
+        parser.on('startElement', function (name) {
+            starts.push({
+                name,
+                argc: arguments.length,
+                second: arguments[1],
+            })
+        })
+        parser.on('endElement', function (name) {})
+        parser.on('text', function (text) {})
+        parser.parse(xml)
+        expect(starts).toEqual([
+            { name: 'item', argc: 1, second: undefined },
+            { name: 'name', argc: 1, second: undefined },
+        ])
+    })
+
+    test('arity-2 startElement still receives fresh attrs each time', () => {
+        const xml = '<a id="1"/><a id="2"/>'
+        const parser = new SaxParser()
+        const attrsList = []
+        parser.on('startElement', function (name, attrs) {
+            attrsList.push(attrs)
+        })
+        parser.on('endElement', function (name) {})
+        parser.on('text', function (text) {})
+        parser.parse(xml)
+        expect(attrsList).toHaveLength(2)
+        expect(attrsList[0]).toEqual({ id: '1' })
+        expect(attrsList[1]).toEqual({ id: '2' })
+        expect(attrsList[0]).not.toBe(attrsList[1])
+        expect(Object.getPrototypeOf(attrsList[0])).toBe(null)
     })
 
     test('element with self closing tag', async () => {

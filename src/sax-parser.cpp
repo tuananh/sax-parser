@@ -44,6 +44,8 @@ public:
 
             _curEleAttrs.push_back(name);
             _curEleAttrs.push_back(value);
+            _saxParserImpl->pushAttrLens(static_cast<uint32_t>(nameLen),
+                                         static_cast<uint32_t>(valueLen));
         };
         _sax3Handler.xml_end_attr_cb = [=]() {
             if (_saxParserImpl->eventNeeds().startElement)
@@ -64,10 +66,12 @@ public:
                                             (const XML_CHAR *)_curEleName.c_str(),
                                             (const XML_CHAR **)attrs);
                 }
+                _saxParserImpl->clearAttrLens();
             }
             else
             {
                 _curEleAttrs.clear();
+                _saxParserImpl->clearAttrLens();
             }
 
             if (_saxParserImpl->emitEndAttributeEvent())
@@ -123,6 +127,8 @@ public:
 
             _xmlDeclAttrs.push_back(name);
             _xmlDeclAttrs.push_back(value);
+            _saxParserImpl->pushAttrLens(static_cast<uint32_t>(nameLen),
+                                         static_cast<uint32_t>(valueLen));
         };
         _sax3Handler.xml_end_decl_attr_cb = [=]() {
             if (_saxParserImpl->eventNeeds().xmlDecl)
@@ -139,10 +145,12 @@ public:
                     const char **attrs = &attr;
                     SAXParser::xmlDeclarationHandler(_saxParserImpl, (const XML_CHAR **)attrs);
                 }
+                _saxParserImpl->clearAttrLens();
             }
             else
             {
                 _xmlDeclAttrs.clear();
+                _saxParserImpl->clearAttrLens();
             }
 
             if (_saxParserImpl->eventNeeds().endXmlDeclAttr)
@@ -156,6 +164,8 @@ public:
     };
 
     void setSAXParserImp(SAXParser *parser) { _saxParserImpl = parser; }
+
+    size_t currentElementNameLength() const { return _curEleName.length(); }
 
     operator xsxml::xml_sax3_parse_cb *() { return &_sax3Handler; }
 
@@ -275,7 +285,8 @@ void SAXParser::startElement(void *ctx, const XML_CHAR *name,
     if (!parser->_emitEvents || parser->_delegator == nullptr)
         return;
 
-    parser->_delegator->startElement(ctx, (char *)name, (const char **)attrs);
+    const size_t nameLen = parser->_saxHandler->currentElementNameLength();
+    parser->_delegator->startElement(ctx, (char *)name, nameLen, (const char **)attrs);
 }
 void SAXParser::endElement(void *ctx, const XML_CHAR *name, size_t len)
 {
