@@ -36,6 +36,8 @@ private:
     static Napi::FunctionReference constructor;
 
     Napi::ObjectReference _jsThis;
+    Napi::FunctionReference _dispatchHotFn;
+    Napi::FunctionReference _dispatchEventsFn;
     std::unique_ptr<saxparser::SAXParser> _parser;
     std::unique_ptr<ListenerRegistry> _registry;
     saxparser::EventCollector _collector;
@@ -62,5 +64,6 @@ private:
     void flushEventBatch();
     void finishEventCollection(Napi::Env env);
     void flushFeedSession(Napi::Env env);
+    void ensureDispatchFns();
     void dispatchCollected(Napi::Env env, const char *xmlData, size_t xmlLength, size_t eventCount);
 };

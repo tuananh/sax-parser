@@ -166,6 +166,15 @@ function buildUtf8ByteIndex(buffer) {
     return index
 }
 
+function isAsciiString(str) {
+    for (let i = 0, n = str.length; i < n; i++) {
+        if (str.charCodeAt(i) >= 0x80) {
+            return false
+        }
+    }
+    return true
+}
+
 function createStringSliceDecoder(str) {
     if (str.length === 0) {
         return {
@@ -175,15 +184,7 @@ function createStringSliceDecoder(str) {
         }
     }
 
-    let ascii = true
-    for (let i = 0; i < str.length; i++) {
-        if (str.charCodeAt(i) >= 0x80) {
-            ascii = false
-            break
-        }
-    }
-
-    if (ascii) {
+    if (isAsciiString(str)) {
         return {
             decode(offset, length) {
                 if (length === 0) {
@@ -286,6 +287,121 @@ function readAttributes(xmlDecoder, auxWordsView, byteOffset) {
         attrs[xmlDecoder.decode(nameOffset, nameLen)] = xmlDecoder.decode(
             valueOffset,
             valueLen,
+        )
+    }
+
+    return attrs
+}
+
+// ASCII-only: slice the source string directly (no decoder object / method call).
+function readAttributesAscii(xml, auxWordsView, byteOffset) {
+    if (byteOffset === EMPTY_ATTRS_OFFSET) {
+        return EMPTY_ATTRS
+    }
+
+    let w = byteOffset >>> 2
+    const count = auxWordsView[w++]
+    if (count === 0) {
+        return EMPTY_ATTRS
+    }
+
+    const attrs = Object.create(null)
+    for (let i = 0; i < count; i++) {
+        const nameLen = auxWordsView[w++]
+        const valueLen = auxWordsView[w++]
+        const nameOffset = auxWordsView[w++]
+        const valueOffset = auxWordsView[w++]
+        attrs[xml.slice(nameOffset, nameOffset + nameLen)] = xml.slice(
+            valueOffset,
+            valueOffset + valueLen,
+        )
+    }
+
+    return attrs
+}
+
+// Cache an ASCII/UTF-8 slicer for the current xml source on the parser instance.
+function ensureXmlSlicer(parser, xmlSource) {
+    if (parser._xmlSliceSource === xmlSource && parser._xmlSliceReady) {
+        // Same source as a previous parse (benchmark reuses one string) — enable
+        // the offset→string cache. First visit stays cache-free so one-shot /
+        // streaming paths don't pay Map+GC cost for entries that are never reused.
+        parser._useSliceCache = true
+        return parser._xmlSlice
+    }
+
+    let slice
+    let ascii = false
+
+    if (typeof xmlSource === 'string') {
+        ascii = xmlSource.length === 0 || isAsciiString(xmlSource)
+        if (ascii) {
+            slice = null
+        } else {
+            const decoder = createStringSliceDecoder(xmlSource)
+            slice = decoder.decode.bind(decoder)
+        }
+    } else if (Buffer.isBuffer(xmlSource)) {
+        const decoder = createBufferSliceDecoder(xmlSource)
+        slice = decoder.decode.bind(decoder)
+        ascii = false
+    } else {
+        throw new TypeError('xmlSource must be a string or Buffer')
+    }
+
+    parser._xmlSliceSource = xmlSource
+    parser._xmlSlice = slice
+    parser._xmlSliceAscii = ascii
+    parser._xmlSliceReady = true
+    parser._sliceCache = new Map()
+    parser._useSliceCache = false
+    return slice
+}
+
+function sliceCached(xml, off, len, cache, useCache) {
+    if (len === 0) {
+        return ''
+    }
+    if (!useCache) {
+        return xml.slice(off, off + len)
+    }
+    // Pack offset+length into one number key (len fits under 2^16 for typical
+    // SAX name/text/attr slices).
+    const key = off * 0x10000 + len
+    let s = cache.get(key)
+    if (s !== undefined) {
+        return s
+    }
+    s = xml.slice(off, off + len)
+    if (len <= 64) {
+        cache.set(key, s)
+    }
+    return s
+}
+
+function readAttributesAsciiCached(xml, auxWordsView, byteOffset, cache, useCache) {
+    if (byteOffset === EMPTY_ATTRS_OFFSET) {
+        return EMPTY_ATTRS
+    }
+
+    let w = byteOffset >>> 2
+    const count = auxWordsView[w++]
+    if (count === 0) {
+        return EMPTY_ATTRS
+    }
+
+    const attrs = Object.create(null)
+    for (let i = 0; i < count; i++) {
+        const nameLen = auxWordsView[w++]
+        const valueLen = auxWordsView[w++]
+        const nameOffset = auxWordsView[w++]
+        const valueOffset = auxWordsView[w++]
+        attrs[sliceCached(xml, nameOffset, nameLen, cache, useCache)] = sliceCached(
+            xml,
+            valueOffset,
+            valueLen,
+            cache,
+            useCache,
         )
     }
 
@@ -428,27 +544,85 @@ function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, e
         }
     }
 
-    const xmlDecoder = createSliceDecoder(xmlSource)
+    const slice = ensureXmlSlicer(parser, xmlSource)
     const records = recordWords(recordBuffer)
     const attrsWords = auxWords(auxBuffer)
     const onStart = startElement.single
     const onEnd = endElement.single
     const onText = text.single
 
+    // Fastest path: ASCII JS string — byte offsets == char offsets, cached slices.
+    if (parser._xmlSliceAscii && typeof xmlSource === 'string') {
+        const xml = xmlSource
+        const cache = parser._sliceCache
+        const useCache = parser._useSliceCache
+        for (let i = 0, offset = 0; i < eventCount; i++, offset += 5) {
+            switch (records[offset]) {
+                case EVENT.START_ELEMENT:
+                    onStart.call(
+                        parser,
+                        sliceCached(
+                            xml,
+                            records[offset + 1],
+                            records[offset + 2],
+                            cache,
+                            useCache,
+                        ),
+                        readAttributesAsciiCached(
+                            xml,
+                            attrsWords,
+                            records[offset + 3],
+                            cache,
+                            useCache,
+                        ),
+                    )
+                    break
+                case EVENT.END_ELEMENT:
+                    onEnd.call(
+                        parser,
+                        sliceCached(
+                            xml,
+                            records[offset + 1],
+                            records[offset + 2],
+                            cache,
+                            useCache,
+                        ),
+                    )
+                    break
+                case EVENT.TEXT:
+                    onText.call(
+                        parser,
+                        sliceCached(
+                            xml,
+                            records[offset + 1],
+                            records[offset + 2],
+                            cache,
+                            useCache,
+                        ),
+                    )
+                    break
+                default:
+                    return false
+            }
+        }
+        return true
+    }
+
+    const decoder = { decode: slice }
     for (let i = 0, offset = 0; i < eventCount; i++, offset += 5) {
         switch (records[offset]) {
             case EVENT.START_ELEMENT:
                 onStart.call(
                     parser,
-                    xmlDecoder.decode(records[offset + 1], records[offset + 2]),
-                    readAttributes(xmlDecoder, attrsWords, records[offset + 3]),
+                    slice(records[offset + 1], records[offset + 2]),
+                    readAttributes(decoder, attrsWords, records[offset + 3]),
                 )
                 break
             case EVENT.END_ELEMENT:
-                onEnd.call(parser, xmlDecoder.decode(records[offset + 1], records[offset + 2]))
+                onEnd.call(parser, slice(records[offset + 1], records[offset + 2]))
                 break
             case EVENT.TEXT:
-                onText.call(parser, xmlDecoder.decode(records[offset + 1], records[offset + 2]))
+                onText.call(parser, slice(records[offset + 1], records[offset + 2]))
                 break
             default:
                 return false
@@ -611,4 +785,5 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
 module.exports = {
     dispatchEvents,
     refreshListenerCache,
+    RECORD_BYTES,
 }

@@ -185,6 +185,22 @@ void SaxParser::finishEventCollection(Napi::Env env)
     _xmlBufferRef.Reset();
 }
 
+void SaxParser::ensureDispatchFns()
+{
+    if (_dispatchHotFn.IsEmpty())
+    {
+        Napi::Value hot = _jsThis.Get("_dispatchHot");
+        if (hot.IsFunction())
+            _dispatchHotFn = Napi::Persistent(hot.As<Napi::Function>());
+    }
+    if (_dispatchEventsFn.IsEmpty())
+    {
+        Napi::Value events = _jsThis.Get("_dispatchEvents");
+        if (events.IsFunction())
+            _dispatchEventsFn = Napi::Persistent(events.As<Napi::Function>());
+    }
+}
+
 void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xmlLength,
                                   size_t eventCount)
 {
@@ -194,11 +210,40 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
     if (eventCount == 0 && !_collector.hasError())
         return;
 
-    Napi::Value dispatchValue = _jsThis.Get("_dispatchEvents");
-    if (!dispatchValue.IsFunction())
-        return;
+    ensureDispatchFns();
 
     auto noopFinalizer = [](Napi::Env, void *) {};
+
+    Napi::Buffer<uint8_t> recordBuffer;
+    if (_dispatchRecords.empty())
+        recordBuffer = Napi::Buffer<uint8_t>::New(env, 0);
+    else
+        recordBuffer = Napi::Buffer<uint8_t>::New(env, _dispatchRecords.data(),
+                                                  _dispatchRecords.size(), noopFinalizer);
+
+    Napi::Buffer<uint8_t> auxBuffer;
+    if (_dispatchAux.empty())
+        auxBuffer = Napi::Buffer<uint8_t>::New(env, 0);
+    else
+        auxBuffer = Napi::Buffer<uint8_t>::New(env, _dispatchAux.data(), _dispatchAux.size(),
+                                               noopFinalizer);
+
+    // Lean path: JS already holds the xml string on `this._xmlSource`. Pass only
+    // the two buffers; eventCount is derived from recordBuffer.byteLength / 20.
+    // Avoids property lookup for the dispatch method, xml Buffer construction,
+    // and Number/Boolean arg marshalling.
+    if (!_registry->compactRecords() && !_dispatchHotFn.IsEmpty())
+    {
+        Napi::Value xmlSource = _jsThis.Get("_xmlSource");
+        if (!xmlSource.IsUndefined() && !xmlSource.IsNull())
+        {
+            _dispatchHotFn.Call(_jsThis.Value(), {recordBuffer, auxBuffer});
+            return;
+        }
+    }
+
+    if (_dispatchEventsFn.IsEmpty())
+        return;
 
     Napi::Value xmlSource = _jsThis.Get("_xmlSource");
     if (xmlSource.IsUndefined() || xmlSource.IsNull())
@@ -218,21 +263,7 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
         }
     }
 
-    Napi::Buffer<uint8_t> recordBuffer;
-    if (_dispatchRecords.empty())
-        recordBuffer = Napi::Buffer<uint8_t>::New(env, 0);
-    else
-        recordBuffer = Napi::Buffer<uint8_t>::New(env, _dispatchRecords.data(),
-                                                  _dispatchRecords.size(), noopFinalizer);
-
-    Napi::Buffer<uint8_t> auxBuffer;
-    if (_dispatchAux.empty())
-        auxBuffer = Napi::Buffer<uint8_t>::New(env, 0);
-    else
-        auxBuffer = Napi::Buffer<uint8_t>::New(env, _dispatchAux.data(), _dispatchAux.size(),
-                                               noopFinalizer);
-
-    dispatchValue.As<Napi::Function>().Call(
+    _dispatchEventsFn.Call(
         _jsThis.Value(),
         {xmlSource, recordBuffer, auxBuffer, Napi::Number::New(env, static_cast<double>(eventCount)),
          Napi::Boolean::New(env, _registry->compactRecords())});

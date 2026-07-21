@@ -44,7 +44,7 @@ function loadBinding() {
 }
 
 const NativeSaxParser = loadBinding().SaxParser
-const { dispatchEvents, refreshListenerCache } = require('./dispatch')
+const { dispatchEvents, refreshListenerCache, RECORD_BYTES } = require('./dispatch')
 const nativeWritev = NativeSaxParser.prototype.writev
 const nativeFeed = NativeSaxParser.prototype.feed
 const nativeParse = NativeSaxParser.prototype.parse
@@ -130,6 +130,12 @@ class SaxParser extends NativeSaxParser {
             this.feed(data, false)
         }
         return this.feed(null, true)
+    }
+
+    _dispatchHot(recordBuffer, auxBuffer) {
+        const xmlSource = this._xmlSource
+        const eventCount = recordBuffer.byteLength / RECORD_BYTES
+        dispatchEvents(this, xmlSource, recordBuffer, auxBuffer, eventCount, false)
     }
 
     _dispatchEvents(xmlSource, recordBuffer, auxBuffer, eventCount, compactRecords) {
