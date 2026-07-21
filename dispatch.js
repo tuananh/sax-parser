@@ -40,6 +40,10 @@ const ERROR_CODES = {
 
 const EMPTY_ATTRS = Object.freeze(Object.create(null))
 
+function slotEmpty(slot) {
+    return !slot.single && !slot.multi
+}
+
 function listenerSlot(events, name) {
     const value = events[name]
     if (!value) {
@@ -74,7 +78,7 @@ function listenerSlot(events, name) {
 
 function refreshListenerCache(parser) {
     const events = parser._events || {}
-    parser._listenerCache = {
+    const cache = {
         startElement: listenerSlot(events, 'startElement'),
         endElement: listenerSlot(events, 'endElement'),
         startAttribute: listenerSlot(events, 'startAttribute'),
@@ -94,6 +98,33 @@ function refreshListenerCache(parser) {
         xmlDecl: listenerSlot(events, 'xmlDecl'),
         processingInstruction: listenerSlot(events, 'processingInstruction'),
     }
+
+    // Precompute eligibility for the element/text hot loop so dispatch does not
+    // re-walk inactive listener slots on every batch.
+    cache.elementTextHot =
+        !!cache.startElement.single &&
+        !!cache.endElement.single &&
+        !!cache.text.single &&
+        cache.startElement.needsArgs &&
+        cache.endElement.needsArgs &&
+        cache.text.needsArgs &&
+        slotEmpty(cache.startAttribute) &&
+        slotEmpty(cache.endAttribute) &&
+        slotEmpty(cache.cdata) &&
+        slotEmpty(cache.comment) &&
+        slotEmpty(cache.doctype) &&
+        slotEmpty(cache.error) &&
+        slotEmpty(cache.startXmlDeclAttr) &&
+        slotEmpty(cache.endXmlDeclAttr) &&
+        slotEmpty(cache.xmlDecl) &&
+        slotEmpty(cache.processingInstruction) &&
+        slotEmpty(cache.startDocument) &&
+        slotEmpty(cache.endDocument) &&
+        slotEmpty(cache.end) &&
+        slotEmpty(cache.finish) &&
+        slotEmpty(cache.done)
+
+    parser._listenerCache = cache
     parser._listenersDirty = false
 }
 
@@ -267,7 +298,7 @@ function auxWords(auxBuffer) {
     )
 }
 
-function readAttributes(xmlDecoder, auxWordsView, byteOffset) {
+function readAttributes(xmlDecoder, auxWordsView, byteOffset, parser) {
     if (byteOffset === EMPTY_ATTRS_OFFSET) {
         return EMPTY_ATTRS
     }
@@ -276,6 +307,29 @@ function readAttributes(xmlDecoder, auxWordsView, byteOffset) {
     const count = auxWordsView[w++]
     if (count === 0) {
         return EMPTY_ATTRS
+    }
+
+    if (parser && parser._useSliceCache) {
+        const attrsCache = parser._attrsCache
+        if (attrsCache) {
+            const cached = attrsCache.get(byteOffset)
+            if (cached !== undefined) {
+                return cached
+            }
+            const attrs = Object.create(null)
+            for (let i = 0; i < count; i++) {
+                const nameLen = auxWordsView[w++]
+                const valueLen = auxWordsView[w++]
+                const nameOffset = auxWordsView[w++]
+                const valueOffset = auxWordsView[w++]
+                attrs[xmlDecoder.decode(nameOffset, nameLen)] = xmlDecoder.decode(
+                    valueOffset,
+                    valueLen,
+                )
+            }
+            attrsCache.set(byteOffset, attrs)
+            return attrs
+        }
     }
 
     const attrs = Object.create(null)
@@ -287,33 +341,6 @@ function readAttributes(xmlDecoder, auxWordsView, byteOffset) {
         attrs[xmlDecoder.decode(nameOffset, nameLen)] = xmlDecoder.decode(
             valueOffset,
             valueLen,
-        )
-    }
-
-    return attrs
-}
-
-// ASCII-only: slice the source string directly (no decoder object / method call).
-function readAttributesAscii(xml, auxWordsView, byteOffset) {
-    if (byteOffset === EMPTY_ATTRS_OFFSET) {
-        return EMPTY_ATTRS
-    }
-
-    let w = byteOffset >>> 2
-    const count = auxWordsView[w++]
-    if (count === 0) {
-        return EMPTY_ATTRS
-    }
-
-    const attrs = Object.create(null)
-    for (let i = 0; i < count; i++) {
-        const nameLen = auxWordsView[w++]
-        const valueLen = auxWordsView[w++]
-        const nameOffset = auxWordsView[w++]
-        const valueOffset = auxWordsView[w++]
-        attrs[xml.slice(nameOffset, nameOffset + nameLen)] = xml.slice(
-            valueOffset,
-            valueOffset + valueLen,
         )
     }
 
@@ -354,6 +381,7 @@ function ensureXmlSlicer(parser, xmlSource) {
     parser._xmlSliceAscii = ascii
     parser._xmlSliceReady = true
     parser._sliceCache = new Map()
+    parser._attrsCache = new Map()
     parser._useSliceCache = false
     return slice
 }
@@ -377,35 +405,6 @@ function sliceCached(xml, off, len, cache, useCache) {
         cache.set(key, s)
     }
     return s
-}
-
-function readAttributesAsciiCached(xml, auxWordsView, byteOffset, cache, useCache) {
-    if (byteOffset === EMPTY_ATTRS_OFFSET) {
-        return EMPTY_ATTRS
-    }
-
-    let w = byteOffset >>> 2
-    const count = auxWordsView[w++]
-    if (count === 0) {
-        return EMPTY_ATTRS
-    }
-
-    const attrs = Object.create(null)
-    for (let i = 0; i < count; i++) {
-        const nameLen = auxWordsView[w++]
-        const valueLen = auxWordsView[w++]
-        const nameOffset = auxWordsView[w++]
-        const valueOffset = auxWordsView[w++]
-        attrs[sliceCached(xml, nameOffset, nameLen, cache, useCache)] = sliceCached(
-            xml,
-            valueOffset,
-            valueLen,
-            cache,
-            useCache,
-        )
-    }
-
-    return attrs
 }
 
 function callAll(listeners, receiver, args) {
@@ -501,111 +500,44 @@ function dispatchCompactEvents(parser, recordWords, eventCount) {
     }
 }
 
-function slotEmpty(slot) {
-    return !slot.single && !slot.multi
-}
-
 function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, eventCount) {
-    const cache = parser._listenerCache
-    if (!cache) {
+    const cache = ensureListenerCache(parser)
+    if (!cache.elementTextHot) {
         return false
-    }
-
-    const startElement = cache.startElement
-    const endElement = cache.endElement
-    const text = cache.text
-    if (!startElement.single || !endElement.single || !text.single) {
-        return false
-    }
-    if (!startElement.needsArgs || !endElement.needsArgs || !text.needsArgs) {
-        return false
-    }
-
-    const inactive = [
-        'startAttribute',
-        'endAttribute',
-        'cdata',
-        'comment',
-        'doctype',
-        'error',
-        'startXmlDeclAttr',
-        'endXmlDeclAttr',
-        'xmlDecl',
-        'processingInstruction',
-        'startDocument',
-        'endDocument',
-        'end',
-        'finish',
-        'done',
-    ]
-    for (let i = 0; i < inactive.length; i++) {
-        if (!slotEmpty(cache[inactive[i]])) {
-            return false
-        }
     }
 
     const slice = ensureXmlSlicer(parser, xmlSource)
     const records = recordWords(recordBuffer)
     const attrsWords = auxWords(auxBuffer)
-    const onStart = startElement.single
-    const onEnd = endElement.single
-    const onText = text.single
+    const onStart = cache.startElement.single
+    const onEnd = cache.endElement.single
+    const onText = cache.text.single
 
-    // Fastest path: ASCII JS string — byte offsets == char offsets, cached slices.
+    // Fastest path: ASCII JS string — byte offsets == char offsets.
     if (parser._xmlSliceAscii && typeof xmlSource === 'string') {
-        const xml = xmlSource
-        const cache = parser._sliceCache
-        const useCache = parser._useSliceCache
-        for (let i = 0, offset = 0; i < eventCount; i++, offset += 5) {
-            switch (records[offset]) {
-                case EVENT.START_ELEMENT:
-                    onStart.call(
-                        parser,
-                        sliceCached(
-                            xml,
-                            records[offset + 1],
-                            records[offset + 2],
-                            cache,
-                            useCache,
-                        ),
-                        readAttributesAsciiCached(
-                            xml,
-                            attrsWords,
-                            records[offset + 3],
-                            cache,
-                            useCache,
-                        ),
-                    )
-                    break
-                case EVENT.END_ELEMENT:
-                    onEnd.call(
-                        parser,
-                        sliceCached(
-                            xml,
-                            records[offset + 1],
-                            records[offset + 2],
-                            cache,
-                            useCache,
-                        ),
-                    )
-                    break
-                case EVENT.TEXT:
-                    onText.call(
-                        parser,
-                        sliceCached(
-                            xml,
-                            records[offset + 1],
-                            records[offset + 2],
-                            cache,
-                            useCache,
-                        ),
-                    )
-                    break
-                default:
-                    return false
-            }
+        if (parser._useSliceCache) {
+            return dispatchAsciiHotCached(
+                parser,
+                xmlSource,
+                records,
+                attrsWords,
+                eventCount,
+                onStart,
+                onEnd,
+                onText,
+                parser._sliceCache,
+            )
         }
-        return true
+        return dispatchAsciiHotFresh(
+            parser,
+            xmlSource,
+            records,
+            attrsWords,
+            eventCount,
+            onStart,
+            onEnd,
+            onText,
+        )
     }
 
     const decoder = { decode: slice }
@@ -615,7 +547,7 @@ function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, e
                 onStart.call(
                     parser,
                     slice(records[offset + 1], records[offset + 2]),
-                    readAttributes(decoder, attrsWords, records[offset + 3]),
+                    readAttributes(decoder, attrsWords, records[offset + 3], parser),
                 )
                 break
             case EVENT.END_ELEMENT:
@@ -629,6 +561,158 @@ function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, e
         }
     }
 
+    return true
+}
+
+function readAsciiAttrsFresh(xml, attrsWords, byteOffset) {
+    if (byteOffset === EMPTY_ATTRS_OFFSET) {
+        return EMPTY_ATTRS
+    }
+    let w = byteOffset >>> 2
+    const count = attrsWords[w++]
+    if (count === 0) {
+        return EMPTY_ATTRS
+    }
+
+    const attrs = Object.create(null)
+    if (count === 1) {
+        const nameLen = attrsWords[w++]
+        const valueLen = attrsWords[w++]
+        const nameOffset = attrsWords[w++]
+        const valueOffset = attrsWords[w++]
+        attrs[nameLen === 0 ? '' : xml.slice(nameOffset, nameOffset + nameLen)] =
+            valueLen === 0 ? '' : xml.slice(valueOffset, valueOffset + valueLen)
+        return attrs
+    }
+
+    for (let i = 0; i < count; i++) {
+        const nameLen = attrsWords[w++]
+        const valueLen = attrsWords[w++]
+        const nameOffset = attrsWords[w++]
+        const valueOffset = attrsWords[w++]
+        attrs[nameLen === 0 ? '' : xml.slice(nameOffset, nameOffset + nameLen)] =
+            valueLen === 0 ? '' : xml.slice(valueOffset, valueOffset + valueLen)
+    }
+    return attrs
+}
+
+function readAsciiAttrsCached(xml, attrsWords, byteOffset, sliceCache, attrsCache) {
+    if (byteOffset === EMPTY_ATTRS_OFFSET) {
+        return EMPTY_ATTRS
+    }
+    let w = byteOffset >>> 2
+    const count = attrsWords[w++]
+    if (count === 0) {
+        return EMPTY_ATTRS
+    }
+
+    const cached = attrsCache.get(byteOffset)
+    if (cached !== undefined) {
+        return cached
+    }
+
+    const attrs = Object.create(null)
+    for (let i = 0; i < count; i++) {
+        const nameLen = attrsWords[w++]
+        const valueLen = attrsWords[w++]
+        const nameOffset = attrsWords[w++]
+        const valueOffset = attrsWords[w++]
+        attrs[sliceCached(xml, nameOffset, nameLen, sliceCache, true)] = sliceCached(
+            xml,
+            valueOffset,
+            valueLen,
+            sliceCache,
+            true,
+        )
+    }
+    attrsCache.set(byteOffset, attrs)
+    return attrs
+}
+
+function sliceAsciiFresh(xml, off, len) {
+    return len === 0 ? '' : xml.slice(off, off + len)
+}
+
+function sliceAsciiCached(xml, off, len, cache) {
+    if (len === 0) {
+        return ''
+    }
+    const key = off * 0x10000 + len
+    let s = cache.get(key)
+    if (s !== undefined) {
+        return s
+    }
+    s = xml.slice(off, off + len)
+    if (len <= 64) {
+        cache.set(key, s)
+    }
+    return s
+}
+
+// First-visit ASCII hot loop: allocate attrs per element, no Map lookups.
+function dispatchAsciiHotFresh(parser, xml, records, attrsWords, eventCount, onStart, onEnd, onText) {
+    const end = eventCount * 5
+    for (let offset = 0; offset < end; offset += 5) {
+        const type = records[offset]
+        if (type === EVENT.START_ELEMENT) {
+            onStart.call(
+                parser,
+                sliceAsciiFresh(xml, records[offset + 1], records[offset + 2]),
+                readAsciiAttrsFresh(xml, attrsWords, records[offset + 3]),
+            )
+        } else if (type === EVENT.END_ELEMENT) {
+            onEnd.call(parser, sliceAsciiFresh(xml, records[offset + 1], records[offset + 2]))
+        } else if (type === EVENT.TEXT) {
+            onText.call(parser, sliceAsciiFresh(xml, records[offset + 1], records[offset + 2]))
+        } else {
+            return false
+        }
+    }
+    return true
+}
+
+// Repeat-visit ASCII hot loop: slice + attrs object caches keyed by source offset.
+function dispatchAsciiHotCached(
+    parser,
+    xml,
+    records,
+    attrsWords,
+    eventCount,
+    onStart,
+    onEnd,
+    onText,
+    sliceCache,
+) {
+    const attrsCache = parser._attrsCache
+    const end = eventCount * 5
+    for (let offset = 0; offset < end; offset += 5) {
+        const type = records[offset]
+        if (type === EVENT.START_ELEMENT) {
+            onStart.call(
+                parser,
+                sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
+                readAsciiAttrsCached(
+                    xml,
+                    attrsWords,
+                    records[offset + 3],
+                    sliceCache,
+                    attrsCache,
+                ),
+            )
+        } else if (type === EVENT.END_ELEMENT) {
+            onEnd.call(
+                parser,
+                sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
+            )
+        } else if (type === EVENT.TEXT) {
+            onText.call(
+                parser,
+                sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
+            )
+        } else {
+            return false
+        }
+    }
     return true
 }
 
@@ -660,6 +744,8 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
     let attrsWords
     if (needsStringDecode) {
         xmlDecoder = createSliceDecoder(xmlSource)
+        // Enable attrs-object reuse / offset cache for the general path too.
+        ensureXmlSlicer(parser, xmlSource)
         if (cache.startElement.needsArgs || cache.xmlDecl.needsArgs) {
             attrsWords = auxWords(auxBuffer)
         }
@@ -693,7 +779,7 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
                 if (cache.startElement.needsArgs) {
                     invokeSlot(cache.startElement, parser, [
                         xmlDecoder.decode(arg0, arg1),
-                        readAttributes(xmlDecoder, attrsWords, arg2),
+                        readAttributes(xmlDecoder, attrsWords, arg2, parser),
                     ])
                 } else {
                     invokeSlot(cache.startElement, parser, [])
@@ -758,7 +844,7 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
             case EVENT.XML_DECL:
                 if (cache.xmlDecl.needsArgs) {
                     invokeSlot(cache.xmlDecl, parser, [
-                        readAttributes(xmlDecoder, attrsWords, arg2),
+                        readAttributes(xmlDecoder, attrsWords, arg2, parser),
                     ])
                 } else {
                     invokeSlot(cache.xmlDecl, parser, [])
@@ -782,8 +868,19 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
     }
 }
 
+// Entry point for the native non-compact batch path. Prefer the element/text
+// hot loop; fall back to the full dispatcher for mixed listener sets.
+function dispatchHot(parser, xmlSource, recordBuffer, auxBuffer) {
+    const eventCount = recordBuffer.byteLength / RECORD_BYTES
+    if (tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, eventCount)) {
+        return
+    }
+    dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, false)
+}
+
 module.exports = {
     dispatchEvents,
+    dispatchHot,
     refreshListenerCache,
     RECORD_BYTES,
 }
