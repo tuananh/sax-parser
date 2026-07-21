@@ -37,7 +37,10 @@ enum CollectedRecord
 class EventCollector
 {
 public:
-    static constexpr size_t kDefaultBatchSize = 1000;
+    // Large enough that typical documents (and the ~10 KB bench) flush once at
+    // endDocument instead of mid-parse. Mid-flush exists only to bound memory
+    // on huge streams; each flush is an expensive N-API → JS crossing.
+    static constexpr size_t kDefaultBatchSize = 16384;
 
     using BatchCallback = std::function<void()>;
 

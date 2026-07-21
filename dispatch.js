@@ -250,24 +250,39 @@ function createSliceDecoder(source) {
     throw new TypeError('xmlSource must be a string or Buffer')
 }
 
-function readAttributes(xmlDecoder, auxBuffer, offset) {
-    const count = auxBuffer.readUInt32LE(offset)
+// Native EventCollector::pushAttributes returns this when there are no attributes,
+// so JS can skip the aux walk entirely.
+const EMPTY_ATTRS_OFFSET = 0xffffffff
+const EMPTY_U32 = new Uint32Array(0)
+
+function auxWords(auxBuffer) {
+    if (!auxBuffer || auxBuffer.byteLength === 0) {
+        return EMPTY_U32
+    }
+    return new Uint32Array(
+        auxBuffer.buffer,
+        auxBuffer.byteOffset,
+        auxBuffer.byteLength >>> 2,
+    )
+}
+
+function readAttributes(xmlDecoder, auxWordsView, byteOffset) {
+    if (byteOffset === EMPTY_ATTRS_OFFSET) {
+        return EMPTY_ATTRS
+    }
+
+    let w = byteOffset >>> 2
+    const count = auxWordsView[w++]
     if (count === 0) {
         return EMPTY_ATTRS
     }
 
-    let cursor = offset + 4
     const attrs = Object.create(null)
-
     for (let i = 0; i < count; i++) {
-        const nameLen = auxBuffer.readUInt32LE(cursor)
-        cursor += 4
-        const valueLen = auxBuffer.readUInt32LE(cursor)
-        cursor += 4
-        const nameOffset = auxBuffer.readUInt32LE(cursor)
-        cursor += 4
-        const valueOffset = auxBuffer.readUInt32LE(cursor)
-        cursor += 4
+        const nameLen = auxWordsView[w++]
+        const valueLen = auxWordsView[w++]
+        const nameOffset = auxWordsView[w++]
+        const valueOffset = auxWordsView[w++]
         attrs[xmlDecoder.decode(nameOffset, nameLen)] = xmlDecoder.decode(
             valueOffset,
             valueLen,
@@ -415,6 +430,7 @@ function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, e
 
     const xmlDecoder = createSliceDecoder(xmlSource)
     const records = recordWords(recordBuffer)
+    const attrsWords = auxWords(auxBuffer)
     const onStart = startElement.single
     const onEnd = endElement.single
     const onText = text.single
@@ -425,7 +441,7 @@ function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, e
                 onStart.call(
                     parser,
                     xmlDecoder.decode(records[offset + 1], records[offset + 2]),
-                    readAttributes(xmlDecoder, auxBuffer, records[offset + 3]),
+                    readAttributes(xmlDecoder, attrsWords, records[offset + 3]),
                 )
                 break
             case EVENT.END_ELEMENT:
@@ -467,8 +483,12 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
 
     let xmlDecoder
     let auxDecoder
+    let attrsWords
     if (needsStringDecode) {
         xmlDecoder = createSliceDecoder(xmlSource)
+        if (cache.startElement.needsArgs || cache.xmlDecl.needsArgs) {
+            attrsWords = auxWords(auxBuffer)
+        }
         if (cache.startAttribute.needsArgs || cache.processingInstruction.needsArgs) {
             auxDecoder = createBufferSliceDecoder(auxBuffer)
         }
@@ -499,7 +519,7 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
                 if (cache.startElement.needsArgs) {
                     invokeSlot(cache.startElement, parser, [
                         xmlDecoder.decode(arg0, arg1),
-                        readAttributes(xmlDecoder, auxBuffer, arg2),
+                        readAttributes(xmlDecoder, attrsWords, arg2),
                     ])
                 } else {
                     invokeSlot(cache.startElement, parser, [])
@@ -564,7 +584,7 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
             case EVENT.XML_DECL:
                 if (cache.xmlDecl.needsArgs) {
                     invokeSlot(cache.xmlDecl, parser, [
-                        readAttributes(xmlDecoder, auxBuffer, arg2),
+                        readAttributes(xmlDecoder, attrsWords, arg2),
                     ])
                 } else {
                     invokeSlot(cache.xmlDecl, parser, [])

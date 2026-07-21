@@ -108,6 +108,11 @@ uint32_t EventCollector::pushAttributes(const char **attrs)
             count++;
     }
 
+    // Sentinel so JS can skip the aux walk for the common empty-attrs case
+    // without reading a zero count word.
+    if (count == 0)
+        return 0xffffffffu;
+
     const uint32_t blockOffset = static_cast<uint32_t>(_aux.size());
     writeU32(_aux, count);
 

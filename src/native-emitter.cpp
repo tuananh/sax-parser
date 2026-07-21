@@ -200,25 +200,37 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
 
     auto noopFinalizer = [](Napi::Env, void *) {};
 
-    Napi::Value xmlSource;
-    if (!_xmlBufferRef.IsEmpty())
+    Napi::Value xmlSource = _jsThis.Get("_xmlSource");
+    if (xmlSource.IsUndefined() || xmlSource.IsNull())
     {
-        xmlSource = _xmlBufferRef.Value();
-    }
-    else if (xmlData != nullptr && xmlLength > 0)
-    {
-        xmlSource = Napi::Buffer<char>::New(env, const_cast<char *>(xmlData), xmlLength,
-                                           noopFinalizer);
-    }
-    else
-    {
-        xmlSource = env.Null();
+        if (!_xmlBufferRef.IsEmpty())
+        {
+            xmlSource = _xmlBufferRef.Value();
+        }
+        else if (xmlData != nullptr && xmlLength > 0)
+        {
+            xmlSource = Napi::Buffer<char>::New(env, const_cast<char *>(xmlData), xmlLength,
+                                               noopFinalizer);
+        }
+        else
+        {
+            xmlSource = env.Null();
+        }
     }
 
-    Napi::Buffer<uint8_t> recordBuffer = Napi::Buffer<uint8_t>::New(
-        env, _dispatchRecords.data(), _dispatchRecords.size(), noopFinalizer);
-    Napi::Buffer<uint8_t> auxBuffer = Napi::Buffer<uint8_t>::New(
-        env, _dispatchAux.data(), _dispatchAux.size(), noopFinalizer);
+    Napi::Buffer<uint8_t> recordBuffer;
+    if (_dispatchRecords.empty())
+        recordBuffer = Napi::Buffer<uint8_t>::New(env, 0);
+    else
+        recordBuffer = Napi::Buffer<uint8_t>::New(env, _dispatchRecords.data(),
+                                                  _dispatchRecords.size(), noopFinalizer);
+
+    Napi::Buffer<uint8_t> auxBuffer;
+    if (_dispatchAux.empty())
+        auxBuffer = Napi::Buffer<uint8_t>::New(env, 0);
+    else
+        auxBuffer = Napi::Buffer<uint8_t>::New(env, _dispatchAux.data(), _dispatchAux.size(),
+                                               noopFinalizer);
 
     dispatchValue.As<Napi::Function>().Call(
         _jsThis.Value(),
