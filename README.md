@@ -21,27 +21,46 @@ pnpm install @tuananh/sax-parser
 
 ## Benchmark
 
-[`benchmark/index.js`](benchmark/index.js) compares SAX-style parsers on a ~10 KB XML document. Each parser registers noop handlers that accept the usual event arguments so the comparison includes string decoding and dispatch overhead.
+[`benchmark/index.mjs`](benchmark/index.mjs) and [`benchmark/streaming.mjs`](benchmark/streaming.mjs) compare SAX-style parsers on a ~10 KB XML document. Each parser registers noop handlers that accept the usual event arguments so the comparison includes string decoding and dispatch overhead.
 
 ```sh
 npm run benchmark
+npm run benchmark:streaming
 ```
 
 Results on Node.js v26.5.0, Linux x64:
 
+### Single-write (`npm run benchmark`)
+
 | module              | ops/sec | native | XML compliant | stream |
 | ------------------- | ------- | ------ | ------------- | ------ |
-| @tuananh/sax-parser | 16,962  | ✅     | ✅            | ✅     |
-| easysax             | 11,126  | ❌     | ✅            | ✅     |
-| saxophone           | 7,543   | ❌     | ✅            | ✅     |
-| ltx                 | 3,853   | ❌     | ❌            | ✅     |
-| sax                 | 1,551   | ❌     | ✅            | ✅     |
-| node-expat          | 1,200   | ✅     | ✅            | ✅     |
-| node-xml            | 759     | ❌     | ✅            | ✅     |
+| @tuananh/sax-parser | 15,590  | ✅     | ✅            | ✅     |
+| @eksml/xml          | 14,761  | ❌     | ✅            | ✅     |
+| saxophone           | 5,566   | ❌     | ✅            | ✅     |
+| easysax             | 5,268   | ❌     | ✅            | ✅     |
+| ltx                 | 3,890   | ❌     | ❌            | ✅     |
+| sax                 | 1,490   | ❌     | ✅            | ✅     |
+| node-expat          | 1,224   | ✅     | ✅            | ✅     |
+| node-xml            | 742     | ❌     | ✅            | ✅     |
+
+### Streaming (`npm run benchmark:streaming`)
+
+Same document delivered in small chunks (fresh parser per iteration):
+
+| module              | 256 B chunks | 64 B chunks |
+| ------------------- | ------------ | ----------- |
+| @tuananh/sax-parser | 8,137        | 8,328       |
+| @eksml/xml          | 8,962        | 7,699       |
+| saxophone           | 4,910        | 3,959       |
+| easysax             | 4,555        | 4,177       |
+| ltx                 | 3,828        | 3,419       |
+| sax                 | 1,565        | 1,550       |
+| node-expat          | 1,166        | 1,081       |
+| node-xml            | 679          | 572         |
 
 ops/sec: higher is better.
 
-`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` is the fastest in this comparison while remaining a native parser with streaming and full XML compliance.
+`ltx` is included for reference — it is fast but not fully XML spec compliant. `@tuananh/sax-parser` is the fastest single-write parser in this comparison while remaining a native parser with streaming and full XML compliance. On chunked input it leads at 64 B chunks and stays close to `@eksml/xml` at 256 B.
 
 ## Usage
 

@@ -55,14 +55,14 @@ const noopError = function (error) {}
 /* eslint-enable no-unused-vars */
 
 const runners = {
-    // sax: function (chunks) {
-    //     const parser = sax.parser()
-    //     parser.onopentag = noopStart
-    //     parser.onclosetag = noopEnd
-    //     parser.ontext = noopText
-    //     for (const chunk of chunks) parser.write(chunk)
-    //     parser.close()
-    // },
+    sax: function (chunks) {
+        const parser = sax.parser()
+        parser.onopentag = noopStart
+        parser.onclosetag = noopEnd
+        parser.ontext = noopText
+        for (const chunk of chunks) parser.write(chunk)
+        parser.close()
+    },
     '@tuananh/sax-parser': function (chunks) {
         const parser = new MySaxParser()
         parser.on('startElement', noopStart)
@@ -71,56 +71,56 @@ const runners = {
         for (const chunk of chunks) parser.write(chunk)
         parser.end()
     },
-    // 'node-xml': function (chunks) {
-    //     const parser = new nodeXml.SaxParser(function (cb) {
-    //         cb.onStartElementNS(noopStart)
-    //         cb.onEndElementNS(noopEnd)
-    //         cb.onCharacters(noopText)
-    //     })
-    //     // parseString keeps parser state across calls (continueParsing)
-    //     for (const chunk of chunks) parser.parseString(chunk)
-    // },
-    // 'node-expat': function (chunks) {
-    //     const parser = new expat.Parser()
-    //     parser.on('startElement', noopStart)
-    //     parser.on('endElement', noopEnd)
-    //     parser.on('text', noopText)
-    //     for (const chunk of chunks) parser.parse(chunk, false)
-    //     parser.parse('', true)
-    // },
-    // ltx: function (chunks) {
-    //     const parser = new LtxSaxParser()
-    //     parser.on('startElement', noopStart)
-    //     parser.on('endElement', noopEnd)
-    //     parser.on('text', noopText)
-    //     for (const chunk of chunks) parser.write(chunk)
-    // },
-    // saxophone: function (chunks) {
-    //     const parser = new Saxophone()
-    //     // attributes arrive as a raw string; parse them like the others do
-    //     parser.on('tagopen', function (tag) {
-    //         Saxophone.parseAttrs(tag.attrs)
-    //     })
-    //     parser.on('tagclose', noopEnd)
-    //     parser.on('text', noopText)
-    //     // saxophone validates document completeness at stream end and emits
-    //     // 'error'; without a listener the stream throws
-    //     parser.on('error', noopError)
-    //     for (const chunk of chunks) parser.write(chunk)
-    //     parser.end()
-    // },
-    // easysax: function (chunks) {
-    //     const parser = new EasySAXParser()
-    //     // attributes are parsed lazily via getAttr(); call it so easysax
-    //     // materializes attributes like the other parsers do
-    //     parser.on('startNode', function (name, getAttr) {
-    //         getAttr()
-    //     })
-    //     parser.on('endNode', noopEnd)
-    //     parser.on('textNode', noopText)
-    //     for (const chunk of chunks) parser.write(chunk)
-    //     parser.end()
-    // },
+    'node-xml': function (chunks) {
+        const parser = new nodeXml.SaxParser(function (cb) {
+            cb.onStartElementNS(noopStart)
+            cb.onEndElementNS(noopEnd)
+            cb.onCharacters(noopText)
+        })
+        // parseString keeps parser state across calls (continueParsing)
+        for (const chunk of chunks) parser.parseString(chunk)
+    },
+    'node-expat': function (chunks) {
+        const parser = new expat.Parser()
+        parser.on('startElement', noopStart)
+        parser.on('endElement', noopEnd)
+        parser.on('text', noopText)
+        for (const chunk of chunks) parser.parse(chunk, false)
+        parser.parse('', true)
+    },
+    ltx: function (chunks) {
+        const parser = new LtxSaxParser()
+        parser.on('startElement', noopStart)
+        parser.on('endElement', noopEnd)
+        parser.on('text', noopText)
+        for (const chunk of chunks) parser.write(chunk)
+    },
+    saxophone: function (chunks) {
+        const parser = new Saxophone()
+        // attributes arrive as a raw string; parse them like the others do
+        parser.on('tagopen', function (tag) {
+            Saxophone.parseAttrs(tag.attrs)
+        })
+        parser.on('tagclose', noopEnd)
+        parser.on('text', noopText)
+        // saxophone validates document completeness at stream end and emits
+        // 'error'; without a listener the stream throws
+        parser.on('error', noopError)
+        for (const chunk of chunks) parser.write(chunk)
+        parser.end()
+    },
+    easysax: function (chunks) {
+        const parser = new EasySAXParser()
+        // attributes are parsed lazily via getAttr(); call it so easysax
+        // materializes attributes like the other parsers do
+        parser.on('startNode', function (name, getAttr) {
+            getAttr()
+        })
+        parser.on('endNode', noopEnd)
+        parser.on('textNode', noopText)
+        for (const chunk of chunks) parser.write(chunk)
+        parser.end()
+    },
     '@eksml/xml': function (chunks) {
         const parser = createEksmlSaxParser()
         parser.on('openTag', noopStart)

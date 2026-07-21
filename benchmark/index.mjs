@@ -145,13 +145,13 @@ function EksmlParser() {
 }
 
 const parsers = [
-    // SaxParser,
+    SaxParser,
     ThisSaxParser,
-    // NodeXmlParser,
-    // ExpatParser,
-    // LtxParser,
-    // SaxophoneParser,
-    // EasysaxParser,
+    NodeXmlParser,
+    ExpatParser,
+    LtxParser,
+    SaxophoneParser,
+    EasysaxParser,
     EksmlParser,
 ].map(function (Parser) {
     return new Parser()
