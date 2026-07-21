@@ -43,8 +43,105 @@ function loadBinding() {
     )
 }
 
-const SaxParser = loadBinding().SaxParser
-const { dispatchEvents } = require('./dispatch')
+const NativeSaxParser = loadBinding().SaxParser
+const { dispatchEvents, refreshListenerCache } = require('./dispatch')
+const nativeWritev = NativeSaxParser.prototype.writev
+const nativeFeed = NativeSaxParser.prototype.feed
+const nativeParse = NativeSaxParser.prototype.parse
+
+class SaxParser extends NativeSaxParser {
+    parse(data) {
+        if (typeof data === 'string' || Buffer.isBuffer(data)) {
+            this._xmlSource = data
+        }
+        try {
+            return nativeParse.call(this, data)
+        } finally {
+            this._xmlSource = null
+        }
+    }
+
+    feed(data, flush) {
+        flush = !!flush
+
+        if (data == null || data === undefined) {
+            if (this._pendingChunks && this._pendingChunks.length > 0) {
+                if (typeof this._pendingChunks[0] === 'string') {
+                    this._xmlSource = this._pendingChunks.join('')
+                }
+                try {
+                    return nativeWritev.call(this, this._pendingChunks, flush)
+                } finally {
+                    this._xmlSource = null
+                    this._pendingChunks = null
+                }
+            }
+            return nativeFeed.call(this, data, flush)
+        }
+
+        if (!flush) {
+            if (!this._pendingChunks) {
+                this._pendingChunks = [data]
+            } else {
+                this._pendingChunks.push(data)
+            }
+            return
+        }
+
+        if (this._pendingChunks) {
+            this._pendingChunks.push(data)
+            if (typeof this._pendingChunks[0] === 'string') {
+                this._xmlSource = this._pendingChunks.join('')
+            }
+            try {
+                return nativeWritev.call(this, this._pendingChunks, flush)
+            } finally {
+                this._xmlSource = null
+                this._pendingChunks = null
+            }
+        }
+
+        if (typeof data === 'string') {
+            this._xmlSource = data
+        }
+        try {
+            return nativeFeed.call(this, data, flush)
+        } finally {
+            this._xmlSource = null
+        }
+    }
+
+    write(data) {
+        if (data == null) {
+            return this.feed(null, true)
+        }
+        return this.feed(data, false)
+    }
+
+    writev(chunks, flush) {
+        if (flush === undefined) {
+            flush = false
+        }
+        return nativeWritev.call(this, chunks, flush)
+    }
+
+    end(data) {
+        if (data != null) {
+            this.feed(data, false)
+        }
+        return this.feed(null, true)
+    }
+
+    _dispatchEvents(xmlSource, recordBuffer, auxBuffer, eventCount, compactRecords) {
+        if (this._xmlSource != null) {
+            xmlSource = this._xmlSource
+        }
+        dispatchEvents(this, xmlSource, recordBuffer, auxBuffer, eventCount, compactRecords)
+    }
+}
+
+// Alias native writev as feedv for symmetry with feed().
+SaxParser.prototype.feedv = SaxParser.prototype.writev
 
 inherits(SaxParser, EventEmitter)
 inherits(SaxParser, Stream)
@@ -70,32 +167,9 @@ function markListenersDirty() {
         const result = original.apply(this, arguments)
         markListenersDirty.call(this)
         this._listenersDirty = true
+        refreshListenerCache(this)
         return result
     }
 })
-
-SaxParser.prototype._dispatchEvents = function (
-    xmlSource,
-    recordBuffer,
-    auxBuffer,
-    eventCount,
-    compactRecords,
-) {
-    dispatchEvents(this, xmlSource, recordBuffer, auxBuffer, eventCount, compactRecords)
-}
-
-SaxParser.prototype.write = function (data) {
-    if (data == null) {
-        return this.feed(null, true)
-    }
-    return this.feed(data, false)
-}
-
-SaxParser.prototype.end = function (data) {
-    if (data != null) {
-        this.feed(data, false)
-    }
-    return this.feed(null, true)
-}
 
 module.exports = SaxParser

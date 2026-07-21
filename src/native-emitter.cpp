@@ -57,6 +57,7 @@ Napi::Object SaxParser::Init(Napi::Env env, Napi::Object exports)
         env, "SaxParser",
         {InstanceMethod("parse", &SaxParser::Parse),
          InstanceMethod("feed", &SaxParser::Feed),
+         InstanceMethod("writev", &SaxParser::Writev),
          InstanceMethod("_markListenersDirty", &SaxParser::MarkListenersDirty)});
 
     constructor = Napi::Persistent(func);
@@ -71,7 +72,10 @@ SaxParser::SaxParser(const Napi::CallbackInfo &info)
       _jsThis(Napi::Persistent(info.This().As<Napi::Object>())),
       _parser(new SAXParser()),
       _registry(new ListenerRegistry(Napi::Persistent(info.This().As<Napi::Object>()))),
-      _collectingDelegator(&_collector)
+      _collectingDelegator(&_collector),
+      _xmlDispatchBase(nullptr),
+      _xmlDispatchLength(0),
+      _feedSessionActive(false)
 {
     _parser->init("UTF-8");
     _parser->setDelegator(&_collectingDelegator);
@@ -149,7 +153,19 @@ void SaxParser::MarkListenersDirty(const Napi::CallbackInfo &info)
     _registry->markListenersDirty();
 }
 
-void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xmlLength)
+void SaxParser::beginEventCollection(const char *xmlBase, size_t xmlLength)
+{
+    _collector.clear();
+    _collector.reserve(8192, 16384);
+    _collector.setCompactRecords(_registry->compactRecords());
+    _collector.setXmlBase(xmlBase);
+    _xmlDispatchBase = xmlBase;
+    _xmlDispatchLength = xmlLength;
+    _collectingDelegator.beginParse(_parser.get());
+    _collector.setBatchCallback([this]() { flushEventBatch(); });
+}
+
+void SaxParser::flushEventBatch()
 {
     if (!_registry->hasAnyListeners())
         return;
@@ -159,6 +175,24 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
         return;
 
     _collector.releaseInto(_dispatchRecords, _dispatchAux, eventCount);
+    dispatchCollected(_jsThis.Env(), _xmlDispatchBase, _xmlDispatchLength, eventCount);
+}
+
+void SaxParser::finishEventCollection(Napi::Env env)
+{
+    flushEventBatch();
+    _collector.clearBatchCallback();
+    _xmlBufferRef.Reset();
+}
+
+void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xmlLength,
+                                  size_t eventCount)
+{
+    if (!_registry->hasAnyListeners())
+        return;
+
+    if (eventCount == 0 && !_collector.hasError())
+        return;
 
     Napi::Value dispatchValue = _jsThis.Get("_dispatchEvents");
     if (!dispatchValue.IsFunction())
@@ -166,7 +200,21 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
 
     auto noopFinalizer = [](Napi::Env, void *) {};
 
-    Napi::String xmlString = Napi::String::New(env, xmlData, xmlLength);
+    Napi::Value xmlSource;
+    if (!_xmlBufferRef.IsEmpty())
+    {
+        xmlSource = _xmlBufferRef.Value();
+    }
+    else if (xmlData != nullptr && xmlLength > 0)
+    {
+        xmlSource = Napi::Buffer<char>::New(env, const_cast<char *>(xmlData), xmlLength,
+                                           noopFinalizer);
+    }
+    else
+    {
+        xmlSource = env.Null();
+    }
+
     Napi::Buffer<uint8_t> recordBuffer = Napi::Buffer<uint8_t>::New(
         env, _dispatchRecords.data(), _dispatchRecords.size(), noopFinalizer);
     Napi::Buffer<uint8_t> auxBuffer = Napi::Buffer<uint8_t>::New(
@@ -174,8 +222,58 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
 
     dispatchValue.As<Napi::Function>().Call(
         _jsThis.Value(),
-        {xmlString, recordBuffer, auxBuffer, Napi::Number::New(env, static_cast<double>(eventCount)),
+        {xmlSource, recordBuffer, auxBuffer, Napi::Number::New(env, static_cast<double>(eventCount)),
          Napi::Boolean::New(env, _registry->compactRecords())});
+}
+
+void SaxParser::appendFeedChunk(const Napi::Value &chunk, Napi::Env env)
+{
+    if (chunk.IsNull() || chunk.IsUndefined())
+        return;
+
+    if (chunk.IsString())
+    {
+        std::string utf8 = chunk.As<Napi::String>().Utf8Value();
+        _feedXml.insert(_feedXml.end(), utf8.begin(), utf8.end());
+        return;
+    }
+
+    if (chunk.IsBuffer())
+    {
+        Napi::Buffer<char> buffer = chunk.As<Napi::Buffer<char>>();
+        const char *data = buffer.Data();
+        _feedXml.insert(_feedXml.end(), data, data + buffer.Length());
+        return;
+    }
+
+    throw Napi::Error::New(env, "Each chunk must be a string or buffer.");
+}
+
+void SaxParser::flushFeedSession(Napi::Env env)
+{
+    if (_feedXml.empty())
+    {
+        _collector.setXmlBase(nullptr);
+        _xmlDispatchBase = nullptr;
+        _xmlDispatchLength = 0;
+        _collectingDelegator.beginParse(_parser.get());
+        _parser->feed(nullptr, 0, true);
+        finishEventCollection(env);
+        _feedSessionActive = false;
+        return;
+    }
+
+    _collector.setXmlBase(_feedXml.data());
+    _xmlDispatchBase = _feedXml.data();
+    _xmlDispatchLength = _feedXml.size();
+    _collectingDelegator.beginParse(_parser.get());
+    _parser->parseMutable(_feedXml.data(), _feedXml.size());
+    _parseInput.assign(_feedXml.begin(), _feedXml.end());
+    _xmlDispatchBase = _parseInput.data();
+    _xmlDispatchLength = _parseInput.size();
+    _feedXml.clear();
+    finishEventCollection(env);
+    _feedSessionActive = false;
 }
 
 void SaxParser::runParse(char *xmlData, size_t xmlLength)
@@ -188,12 +286,9 @@ void SaxParser::runParse(char *xmlData, size_t xmlLength)
         return;
     }
 
-    _collector.clear();
-    _collector.setCompactRecords(_registry->compactRecords());
-    _collector.setXmlBase(xmlData);
-    _collectingDelegator.beginParse(_parser.get());
+    beginEventCollection(xmlData, xmlLength);
     _parser->parseMutable(xmlData, xmlLength);
-    dispatchCollected(_jsThis.Env(), xmlData, xmlLength);
+    finishEventCollection(_jsThis.Env());
 }
 
 void SaxParser::runFeed(const char *xmlData, size_t xmlLength, bool flush)
@@ -206,31 +301,70 @@ void SaxParser::runFeed(const char *xmlData, size_t xmlLength, bool flush)
         return;
     }
 
+    if (!_feedSessionActive)
+    {
+        _feedSessionActive = true;
+        beginEventCollection(nullptr, 0);
+    }
+
     if (xmlData != nullptr && xmlLength > 0)
         _feedXml.insert(_feedXml.end(), xmlData, xmlData + xmlLength);
 
     if (!flush)
         return;
 
-    if (_feedXml.empty())
+    flushFeedSession(_jsThis.Env());
+}
+
+void SaxParser::runWritev(const Napi::Array &chunks, bool flush)
+{
+    _registry->beginParse(_parser.get());
+
+    const uint32_t chunkCount = chunks.Length();
+
+    if (!_registry->hasAnyListeners())
     {
-        _collector.clear();
-        _collector.setCompactRecords(_registry->compactRecords());
-        _collector.setXmlBase("");
-        _collectingDelegator.beginParse(_parser.get());
-        _parser->feed(nullptr, 0, true);
-        dispatchCollected(_jsThis.Env(), "", 0);
+        Napi::Env env = _jsThis.Env();
+        for (uint32_t i = 0; i < chunkCount; i++)
+        {
+            Napi::Value chunk = chunks[i];
+            if (chunk.IsNull() || chunk.IsUndefined())
+                continue;
+
+            if (chunk.IsString())
+            {
+                std::string utf8 = chunk.As<Napi::String>().Utf8Value();
+                _parser->feed(utf8.c_str(), utf8.size(), false);
+            }
+            else if (chunk.IsBuffer())
+            {
+                Napi::Buffer<char> buffer = chunk.As<Napi::Buffer<char>>();
+                _parser->feed(buffer.Data(), buffer.Length(), false);
+            }
+            else
+            {
+                throw Napi::Error::New(env, "Each chunk must be a string or buffer.");
+            }
+        }
+
+        _parser->feed(nullptr, 0, flush);
         return;
     }
 
-    _collector.clear();
-    _collector.setCompactRecords(_registry->compactRecords());
-    _collector.setXmlBase(_feedXml.data());
-    _collectingDelegator.beginParse(_parser.get());
-    _parser->parseMutable(_feedXml.data(), _feedXml.size());
-    _parseInput.assign(_feedXml.begin(), _feedXml.end());
-    _feedXml.clear();
-    dispatchCollected(_jsThis.Env(), _parseInput.data(), _parseInput.size());
+    if (!_feedSessionActive)
+    {
+        _feedSessionActive = true;
+        beginEventCollection(nullptr, 0);
+    }
+
+    Napi::Env env = _jsThis.Env();
+    for (uint32_t i = 0; i < chunkCount; i++)
+        appendFeedChunk(chunks[i], env);
+
+    if (!flush)
+        return;
+
+    flushFeedSession(env);
 }
 
 void SaxParser::Parse(const Napi::CallbackInfo &info)
@@ -255,7 +389,9 @@ void SaxParser::Parse(const Napi::CallbackInfo &info)
     else
     {
         Napi::Buffer<char> buffer = info[0].As<Napi::Buffer<char>>();
+        _xmlBufferRef = Napi::Persistent(buffer);
         runParse(buffer.Data(), buffer.Length());
+        _xmlBufferRef.Reset();
     }
 }
 
@@ -296,4 +432,19 @@ void SaxParser::Feed(const Napi::CallbackInfo &info)
         Napi::Buffer<char> buffer = info[0].As<Napi::Buffer<char>>();
         runFeed(buffer.Data(), buffer.Length(), flush);
     }
+}
+
+void SaxParser::Writev(const Napi::CallbackInfo &info)
+{
+    if (info.Length() < 1 || !info[0].IsArray())
+    {
+        throw Napi::Error::New(info.Env(), "Expecting an array of chunks.");
+    }
+
+    bool flush = false;
+    if (info.Length() >= 2 && info[1].IsBoolean())
+        flush = info[1].As<Napi::Boolean>().Value();
+
+    Napi::HandleScope scope(info.Env());
+    runWritev(info[0].As<Napi::Array>(), flush);
 }

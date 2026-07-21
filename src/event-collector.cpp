@@ -14,9 +14,6 @@ void EventCollector::releaseInto(std::vector<uint8_t> &records, std::vector<uint
     _records.clear();
     _aux.clear();
     _eventCount = 0;
-    _xmlBase = nullptr;
-    _errorCode = 0;
-    _errorOffset = 0;
 }
 
 void EventCollector::clear()
@@ -28,6 +25,31 @@ void EventCollector::clear()
     _errorCode = 0;
     _errorOffset = 0;
     _compactRecords = false;
+    _batchCallback = nullptr;
+    _batchSize = kDefaultBatchSize;
+}
+
+void EventCollector::setBatchCallback(BatchCallback callback, size_t batchSize)
+{
+    _batchCallback = std::move(callback);
+    _batchSize = batchSize > 0 ? batchSize : kDefaultBatchSize;
+}
+
+void EventCollector::clearBatchCallback()
+{
+    _batchCallback = nullptr;
+}
+
+void EventCollector::reserve(size_t recordBytes, size_t auxBytes)
+{
+    _records.reserve(recordBytes);
+    _aux.reserve(auxBytes);
+}
+
+void EventCollector::maybeFlushBatch()
+{
+    if (_batchCallback && _eventCount >= _batchSize)
+        _batchCallback();
 }
 
 void EventCollector::writeU32(std::vector<uint8_t> &buf, uint32_t value)
@@ -62,6 +84,7 @@ void EventCollector::pushEvent(uint32_t type, uint32_t arg0, uint32_t arg1, uint
         writeU32(_records, arg3);
     }
     _eventCount++;
+    maybeFlushBatch();
 }
 
 uint32_t EventCollector::pushBytes(const void *data, size_t len)

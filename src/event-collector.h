@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include "sax-parser.h"
@@ -36,10 +37,19 @@ enum CollectedRecord
 class EventCollector
 {
 public:
+    static constexpr size_t kDefaultBatchSize = 1000;
+
+    using BatchCallback = std::function<void()>;
+
     void clear();
     void setXmlBase(const char *base) { _xmlBase = base; }
     void setCompactRecords(bool compact) { _compactRecords = compact; }
     bool compactRecords() const { return _compactRecords; }
+
+    void setBatchCallback(BatchCallback callback, size_t batchSize = kDefaultBatchSize);
+    void clearBatchCallback();
+
+    void reserve(size_t recordBytes, size_t auxBytes);
 
     void pushEvent(uint32_t type, uint32_t arg0, uint32_t arg1, uint32_t arg2 = 0,
                    uint32_t arg3 = 0);
@@ -67,8 +77,11 @@ private:
     uint32_t _errorCode;
     uint32_t _errorOffset;
     bool _compactRecords;
+    BatchCallback _batchCallback;
+    size_t _batchSize;
 
     void writeU32(std::vector<uint8_t> &buf, uint32_t value);
+    void maybeFlushBatch();
 };
 
 class CollectingSAXDelegator : public SAXDelegator

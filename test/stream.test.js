@@ -73,4 +73,67 @@ describe('stream test', () => {
             expect(endEleCnt).toEqual(COUNT + 2)
         })
     })
+
+    test('writev feeds multiple chunks in one native call', async () => {
+        const parser = new SaxParser()
+        const events = []
+
+        parser.on('startElement', (name, attrs) => {
+            events.push(['startElement', name, attrs])
+        })
+        parser.on('endElement', (name) => {
+            events.push(['endElement', name])
+        })
+        parser.on('endDocument', () => {
+            events.push(['endDocument'])
+        })
+
+        parser.writev(['<root>', '<item id="1"/>', '</root>'], true)
+
+        expect(events).toEqual([
+            ['startElement', 'root', {}],
+            ['startElement', 'item', { id: '1' }],
+            ['endElement', 'item'],
+            ['endElement', 'root'],
+            ['endDocument'],
+        ])
+    })
+
+    test('writev accepts buffer chunks', async () => {
+        const parser = new SaxParser()
+        const events = []
+
+        parser.on('startElement', (name) => {
+            events.push(['startElement', name])
+        })
+        parser.on('endElement', (name) => {
+            events.push(['endElement', name])
+        })
+
+        parser.writev(
+            [Buffer.from('<a>'), Buffer.from('<b/>'), Buffer.from('</a>')],
+            true,
+        )
+
+        expect(events).toEqual([
+            ['startElement', 'a'],
+            ['startElement', 'b'],
+            ['endElement', 'b'],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('parse(Buffer) dispatches without copying xml into a string', () => {
+        const parser = new SaxParser()
+        let seen = null
+
+        parser.on('startElement', (name) => {
+            seen = name
+        })
+
+        const xml = Buffer.from('<hello/>')
+        parser.parse(xml)
+
+        expect(seen).toBe('hello')
+    })
 })

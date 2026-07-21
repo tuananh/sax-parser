@@ -17,7 +17,6 @@ const EVENT = {
 }
 
 const RECORD_BYTES = 20
-const COMPACT_RECORD_BYTES = 4
 
 const ERROR_CODES = {
     0: 'OK',
@@ -41,41 +40,59 @@ const ERROR_CODES = {
 
 const EMPTY_ATTRS = Object.freeze(Object.create(null))
 
-function gatherListeners(events, name) {
+function listenerSlot(events, name) {
     const value = events[name]
     if (!value) {
-        return []
+        return { single: null, multi: null, needsArgs: false }
     }
     if (typeof value === 'function') {
-        return [value]
+        return { single: value, multi: null, needsArgs: value.length > 0 }
     }
     if (Array.isArray(value)) {
-        return value.filter((fn) => typeof fn === 'function')
+        const multi = []
+        let needsArgs = false
+        for (let i = 0, n = value.length; i < n; i++) {
+            const fn = value[i]
+            if (typeof fn !== 'function') {
+                continue
+            }
+            if (fn.length > 0) {
+                needsArgs = true
+            }
+            multi.push(fn)
+        }
+        if (multi.length === 0) {
+            return { single: null, multi: null, needsArgs: false }
+        }
+        if (multi.length === 1) {
+            return { single: multi[0], multi: null, needsArgs }
+        }
+        return { single: null, multi, needsArgs }
     }
-    return []
+    return { single: null, multi: null, needsArgs: false }
 }
 
 function refreshListenerCache(parser) {
     const events = parser._events || {}
     parser._listenerCache = {
-        startElement: gatherListeners(events, 'startElement'),
-        endElement: gatherListeners(events, 'endElement'),
-        startAttribute: gatherListeners(events, 'startAttribute'),
-        endAttribute: gatherListeners(events, 'endAttribute'),
-        text: gatherListeners(events, 'text'),
-        cdata: gatherListeners(events, 'cdata'),
-        comment: gatherListeners(events, 'comment'),
-        startDocument: gatherListeners(events, 'startDocument'),
-        endDocument: gatherListeners(events, 'endDocument'),
-        end: gatherListeners(events, 'end'),
-        finish: gatherListeners(events, 'finish'),
-        done: gatherListeners(events, 'done'),
-        doctype: gatherListeners(events, 'doctype'),
-        error: gatherListeners(events, 'error'),
-        startXmlDeclAttr: gatherListeners(events, 'startXmlDeclAttr'),
-        endXmlDeclAttr: gatherListeners(events, 'endXmlDeclAttr'),
-        xmlDecl: gatherListeners(events, 'xmlDecl'),
-        processingInstruction: gatherListeners(events, 'processingInstruction'),
+        startElement: listenerSlot(events, 'startElement'),
+        endElement: listenerSlot(events, 'endElement'),
+        startAttribute: listenerSlot(events, 'startAttribute'),
+        endAttribute: listenerSlot(events, 'endAttribute'),
+        text: listenerSlot(events, 'text'),
+        cdata: listenerSlot(events, 'cdata'),
+        comment: listenerSlot(events, 'comment'),
+        startDocument: listenerSlot(events, 'startDocument'),
+        endDocument: listenerSlot(events, 'endDocument'),
+        end: listenerSlot(events, 'end'),
+        finish: listenerSlot(events, 'finish'),
+        done: listenerSlot(events, 'done'),
+        doctype: listenerSlot(events, 'doctype'),
+        error: listenerSlot(events, 'error'),
+        startXmlDeclAttr: listenerSlot(events, 'startXmlDeclAttr'),
+        endXmlDeclAttr: listenerSlot(events, 'endXmlDeclAttr'),
+        xmlDecl: listenerSlot(events, 'xmlDecl'),
+        processingInstruction: listenerSlot(events, 'processingInstruction'),
     }
     parser._listenersDirty = false
 }
@@ -227,9 +244,11 @@ function createSliceDecoder(source) {
     if (typeof source === 'string') {
         return createStringSliceDecoder(source)
     }
-    return createBufferSliceDecoder(source)
+    if (Buffer.isBuffer(source)) {
+        return createBufferSliceDecoder(source)
+    }
+    throw new TypeError('xmlSource must be a string or Buffer')
 }
-
 
 function readAttributes(xmlDecoder, auxBuffer, offset) {
     const count = auxBuffer.readUInt32LE(offset)
@@ -258,15 +277,6 @@ function readAttributes(xmlDecoder, auxBuffer, offset) {
     return attrs
 }
 
-function listenersNeedArgs(listeners) {
-    for (let i = 0, n = listeners.length; i < n; i++) {
-        if (listeners[i].length > 0) {
-            return true
-        }
-    }
-    return false
-}
-
 function callAll(listeners, receiver, args) {
     for (let i = 0, n = listeners.length; i < n; i++) {
         const fn = listeners[i]
@@ -281,6 +291,24 @@ function callAll(listeners, receiver, args) {
     }
 }
 
+function invokeSlot(slot, receiver, args) {
+    if (slot.single) {
+        const fn = slot.single
+        const arity = fn.length
+        if (arity === 0) {
+            fn.call(receiver)
+        } else if (arity === 1) {
+            fn.call(receiver, args[0])
+        } else {
+            fn.apply(receiver, args)
+        }
+        return
+    }
+    if (slot.multi) {
+        callAll(slot.multi, receiver, args)
+    }
+}
+
 function recordWords(recordBuffer) {
     return new Uint32Array(
         recordBuffer.buffer,
@@ -292,73 +320,126 @@ function recordWords(recordBuffer) {
 function dispatchCompactEvents(parser, recordWords, eventCount) {
     const cache = ensureListenerCache(parser)
 
-    const startDocument = cache.startDocument
-    const endDocument = cache.endDocument
-    const end = cache.end
-    const finish = cache.finish
-    const done = cache.done
-    const startElement = cache.startElement
-    const endElement = cache.endElement
-    const text = cache.text
-    const cdata = cache.cdata
-    const comment = cache.comment
-    const doctype = cache.doctype
-    const error = cache.error
-    const startAttribute = cache.startAttribute
-    const endAttribute = cache.endAttribute
-    const xmlDecl = cache.xmlDecl
-    const processingInstruction = cache.processingInstruction
-
     for (let i = 0; i < eventCount; i++) {
-        const type = recordWords[i]
-
-        switch (type) {
+        switch (recordWords[i]) {
             case EVENT.START_DOCUMENT:
-                callAll(startDocument, parser, [])
+                invokeSlot(cache.startDocument, parser, [])
                 break
             case EVENT.END_DOCUMENT:
-                if (endDocument.length) callAll(endDocument, parser, [])
-                if (end.length) callAll(end, parser, [])
-                if (finish.length) callAll(finish, parser, [])
-                if (done.length) callAll(done, parser, [])
+                invokeSlot(cache.endDocument, parser, [])
+                invokeSlot(cache.end, parser, [])
+                invokeSlot(cache.finish, parser, [])
+                invokeSlot(cache.done, parser, [])
                 break
             case EVENT.START_ELEMENT:
-                callAll(startElement, parser, [])
+                invokeSlot(cache.startElement, parser, [])
                 break
             case EVENT.END_ELEMENT:
-                callAll(endElement, parser, [])
+                invokeSlot(cache.endElement, parser, [])
                 break
             case EVENT.TEXT:
-                callAll(text, parser, [])
+                invokeSlot(cache.text, parser, [])
                 break
             case EVENT.CDATA:
-                callAll(cdata, parser, [])
+                invokeSlot(cache.cdata, parser, [])
                 break
             case EVENT.COMMENT:
-                callAll(comment, parser, [])
+                invokeSlot(cache.comment, parser, [])
                 break
             case EVENT.DOCTYPE:
-                callAll(doctype, parser, [])
+                invokeSlot(cache.doctype, parser, [])
                 break
             case EVENT.ERROR:
-                callAll(error, parser, [])
+                invokeSlot(cache.error, parser, [])
                 break
             case EVENT.START_ATTRIBUTE:
-                callAll(startAttribute, parser, [])
+                invokeSlot(cache.startAttribute, parser, [])
                 break
             case EVENT.END_ATTRIBUTE:
-                callAll(endAttribute, parser, [])
+                invokeSlot(cache.endAttribute, parser, [])
                 break
             case EVENT.XML_DECL:
-                callAll(xmlDecl, parser, [])
+                invokeSlot(cache.xmlDecl, parser, [])
                 break
             case EVENT.PROCESSING_INSTRUCTION:
-                callAll(processingInstruction, parser, [])
+                invokeSlot(cache.processingInstruction, parser, [])
                 break
             default:
                 break
         }
     }
+}
+
+function slotEmpty(slot) {
+    return !slot.single && !slot.multi
+}
+
+function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, eventCount) {
+    const cache = parser._listenerCache
+    if (!cache) {
+        return false
+    }
+
+    const startElement = cache.startElement
+    const endElement = cache.endElement
+    const text = cache.text
+    if (!startElement.single || !endElement.single || !text.single) {
+        return false
+    }
+    if (!startElement.needsArgs || !endElement.needsArgs || !text.needsArgs) {
+        return false
+    }
+
+    const inactive = [
+        'startAttribute',
+        'endAttribute',
+        'cdata',
+        'comment',
+        'doctype',
+        'error',
+        'startXmlDeclAttr',
+        'endXmlDeclAttr',
+        'xmlDecl',
+        'processingInstruction',
+        'startDocument',
+        'endDocument',
+        'end',
+        'finish',
+        'done',
+    ]
+    for (let i = 0; i < inactive.length; i++) {
+        if (!slotEmpty(cache[inactive[i]])) {
+            return false
+        }
+    }
+
+    const xmlDecoder = createSliceDecoder(xmlSource)
+    const records = recordWords(recordBuffer)
+    const onStart = startElement.single
+    const onEnd = endElement.single
+    const onText = text.single
+
+    for (let i = 0, offset = 0; i < eventCount; i++, offset += 5) {
+        switch (records[offset]) {
+            case EVENT.START_ELEMENT:
+                onStart.call(
+                    parser,
+                    xmlDecoder.decode(records[offset + 1], records[offset + 2]),
+                    readAttributes(xmlDecoder, auxBuffer, records[offset + 3]),
+                )
+                break
+            case EVENT.END_ELEMENT:
+                onEnd.call(parser, xmlDecoder.decode(records[offset + 1], records[offset + 2]))
+                break
+            case EVENT.TEXT:
+                onText.call(parser, xmlDecoder.decode(records[offset + 1], records[offset + 2]))
+                break
+            default:
+                return false
+        }
+    }
+
+    return true
 }
 
 function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, compactRecords) {
@@ -367,51 +448,30 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
         return
     }
 
+    if (tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, eventCount)) {
+        return
+    }
+
     const cache = ensureListenerCache(parser)
 
-    const startDocument = cache.startDocument
-    const endDocument = cache.endDocument
-    const end = cache.end
-    const finish = cache.finish
-    const done = cache.done
-    const startElement = cache.startElement
-    const endElement = cache.endElement
-    const text = cache.text
-    const cdata = cache.cdata
-    const comment = cache.comment
-    const doctype = cache.doctype
-    const error = cache.error
-    const startAttribute = cache.startAttribute
-    const endAttribute = cache.endAttribute
-    const xmlDecl = cache.xmlDecl
-    const processingInstruction = cache.processingInstruction
-
-    const startElementNeedsArgs = listenersNeedArgs(startElement)
-    const endElementNeedsArgs = listenersNeedArgs(endElement)
-    const textNeedsArgs = listenersNeedArgs(text)
-    const cdataNeedsArgs = listenersNeedArgs(cdata)
-    const commentNeedsArgs = listenersNeedArgs(comment)
-    const doctypeNeedsArgs = listenersNeedArgs(doctype)
-    const startAttributeNeedsArgs = listenersNeedArgs(startAttribute)
-    const xmlDeclNeedsArgs = listenersNeedArgs(xmlDecl)
-    const processingInstructionNeedsArgs = listenersNeedArgs(processingInstruction)
-
     const needsStringDecode =
-        startElementNeedsArgs ||
-        endElementNeedsArgs ||
-        textNeedsArgs ||
-        cdataNeedsArgs ||
-        commentNeedsArgs ||
-        doctypeNeedsArgs ||
-        startAttributeNeedsArgs ||
-        xmlDeclNeedsArgs ||
-        processingInstructionNeedsArgs
+        cache.startElement.needsArgs ||
+        cache.endElement.needsArgs ||
+        cache.text.needsArgs ||
+        cache.cdata.needsArgs ||
+        cache.comment.needsArgs ||
+        cache.doctype.needsArgs ||
+        cache.startAttribute.needsArgs ||
+        cache.xmlDecl.needsArgs ||
+        cache.processingInstruction.needsArgs
 
     let xmlDecoder
     let auxDecoder
     if (needsStringDecode) {
         xmlDecoder = createSliceDecoder(xmlSource)
-        auxDecoder = createBufferSliceDecoder(auxBuffer)
+        if (cache.startAttribute.needsArgs || cache.processingInstruction.needsArgs) {
+            auxDecoder = createBufferSliceDecoder(auxBuffer)
+        }
     }
 
     const records = recordWords(recordBuffer)
@@ -427,61 +487,61 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
 
         switch (type) {
             case EVENT.START_DOCUMENT:
-                callAll(startDocument, parser, [])
+                invokeSlot(cache.startDocument, parser, [])
                 break
             case EVENT.END_DOCUMENT:
-                if (endDocument.length) callAll(endDocument, parser, [])
-                if (end.length) callAll(end, parser, [])
-                if (finish.length) callAll(finish, parser, [])
-                if (done.length) callAll(done, parser, [])
+                invokeSlot(cache.endDocument, parser, [])
+                invokeSlot(cache.end, parser, [])
+                invokeSlot(cache.finish, parser, [])
+                invokeSlot(cache.done, parser, [])
                 break
             case EVENT.START_ELEMENT:
-                if (startElementNeedsArgs) {
-                    callAll(startElement, parser, [
+                if (cache.startElement.needsArgs) {
+                    invokeSlot(cache.startElement, parser, [
                         xmlDecoder.decode(arg0, arg1),
                         readAttributes(xmlDecoder, auxBuffer, arg2),
                     ])
                 } else {
-                    callAll(startElement, parser, [])
+                    invokeSlot(cache.startElement, parser, [])
                 }
                 break
             case EVENT.END_ELEMENT:
-                if (endElementNeedsArgs) {
-                    callAll(endElement, parser, [xmlDecoder.decode(arg0, arg1)])
+                if (cache.endElement.needsArgs) {
+                    invokeSlot(cache.endElement, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    callAll(endElement, parser, [])
+                    invokeSlot(cache.endElement, parser, [])
                 }
                 break
             case EVENT.TEXT:
-                if (textNeedsArgs) {
-                    callAll(text, parser, [xmlDecoder.decode(arg0, arg1)])
+                if (cache.text.needsArgs) {
+                    invokeSlot(cache.text, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    callAll(text, parser, [])
+                    invokeSlot(cache.text, parser, [])
                 }
                 break
             case EVENT.CDATA:
-                if (cdataNeedsArgs) {
-                    callAll(cdata, parser, [xmlDecoder.decode(arg0, arg1)])
+                if (cache.cdata.needsArgs) {
+                    invokeSlot(cache.cdata, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    callAll(cdata, parser, [])
+                    invokeSlot(cache.cdata, parser, [])
                 }
                 break
             case EVENT.COMMENT:
-                if (commentNeedsArgs) {
-                    callAll(comment, parser, [xmlDecoder.decode(arg0, arg1)])
+                if (cache.comment.needsArgs) {
+                    invokeSlot(cache.comment, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    callAll(comment, parser, [])
+                    invokeSlot(cache.comment, parser, [])
                 }
                 break
             case EVENT.DOCTYPE:
-                if (doctypeNeedsArgs) {
-                    callAll(doctype, parser, [xmlDecoder.decode(arg0, arg1)])
+                if (cache.doctype.needsArgs) {
+                    invokeSlot(cache.doctype, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    callAll(doctype, parser, [])
+                    invokeSlot(cache.doctype, parser, [])
                 }
                 break
             case EVENT.ERROR:
-                callAll(error, parser, [
+                invokeSlot(cache.error, parser, [
                     {
                         code: ERROR_CODES[arg0] || 'ERR_UNKNOWN',
                         offset: arg1,
@@ -489,35 +549,37 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
                 ])
                 break
             case EVENT.START_ATTRIBUTE: {
-                if (startAttributeNeedsArgs) {
+                if (cache.startAttribute.needsArgs) {
                     const attr = Object.create(null)
                     attr[auxDecoder.decode(arg0, arg1)] = auxDecoder.decode(arg2, arg3)
-                    callAll(startAttribute, parser, [attr])
+                    invokeSlot(cache.startAttribute, parser, [attr])
                 } else {
-                    callAll(startAttribute, parser, [])
+                    invokeSlot(cache.startAttribute, parser, [])
                 }
                 break
             }
             case EVENT.END_ATTRIBUTE:
-                callAll(endAttribute, parser, [])
+                invokeSlot(cache.endAttribute, parser, [])
                 break
             case EVENT.XML_DECL:
-                if (xmlDeclNeedsArgs) {
-                    callAll(xmlDecl, parser, [readAttributes(xmlDecoder, auxBuffer, arg2)])
+                if (cache.xmlDecl.needsArgs) {
+                    invokeSlot(cache.xmlDecl, parser, [
+                        readAttributes(xmlDecoder, auxBuffer, arg2),
+                    ])
                 } else {
-                    callAll(xmlDecl, parser, [])
+                    invokeSlot(cache.xmlDecl, parser, [])
                 }
                 break
             case EVENT.PROCESSING_INSTRUCTION:
-                if (processingInstructionNeedsArgs) {
-                    callAll(processingInstruction, parser, [
+                if (cache.processingInstruction.needsArgs) {
+                    invokeSlot(cache.processingInstruction, parser, [
                         {
                             target: auxDecoder.decode(arg0, arg1),
                             instruction: auxDecoder.decode(arg2, arg3),
                         },
                     ])
                 } else {
-                    callAll(processingInstruction, parser, [])
+                    invokeSlot(cache.processingInstruction, parser, [])
                 }
                 break
             default:

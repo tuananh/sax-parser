@@ -44,12 +44,23 @@ private:
     std::vector<char> _feedXml;
     std::vector<uint8_t> _dispatchRecords;
     std::vector<uint8_t> _dispatchAux;
+    Napi::Reference<Napi::Buffer<char>> _xmlBufferRef;
+    const char *_xmlDispatchBase;
+    size_t _xmlDispatchLength;
+    bool _feedSessionActive;
 
     void Parse(const Napi::CallbackInfo &info);
     void Feed(const Napi::CallbackInfo &info);
+    void Writev(const Napi::CallbackInfo &info);
     void MarkListenersDirty(const Napi::CallbackInfo &info);
 
+    void appendFeedChunk(const Napi::Value &chunk, Napi::Env env);
     void runParse(char *xmlData, size_t xmlLength);
     void runFeed(const char *xmlData, size_t xmlLength, bool flush);
-    void dispatchCollected(Napi::Env env, const char *xmlData, size_t xmlLength);
+    void runWritev(const Napi::Array &chunks, bool flush);
+    void beginEventCollection(const char *xmlBase, size_t xmlLength);
+    void flushEventBatch();
+    void finishEventCollection(Napi::Env env);
+    void flushFeedSession(Napi::Env env);
+    void dispatchCollected(Napi::Env env, const char *xmlData, size_t xmlLength, size_t eventCount);
 };
