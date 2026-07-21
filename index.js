@@ -44,7 +44,7 @@ function loadBinding() {
 }
 
 const NativeSaxParser = loadBinding().SaxParser
-const { dispatchEvents, dispatchHot, dispatchCompact, refreshListenerCache } = require('./dispatch')
+const { dispatchEvents, dispatchHot, dispatchCompact } = require('./dispatch')
 const nativeWritev = NativeSaxParser.prototype.writev
 const nativeFeed = NativeSaxParser.prototype.feed
 const nativeParse = NativeSaxParser.prototype.parse
@@ -61,20 +61,30 @@ class SaxParser extends NativeSaxParser {
         }
     }
 
+    // Flush coalesced string chunks through parse(join) — one Utf8Value, same
+    // path as the fast single-shot bench. Buffer chunks still go through writev.
+    _flushPending(flush) {
+        const pending = this._pendingChunks
+        this._pendingChunks = null
+        if (!pending || pending.length === 0) {
+            return nativeFeed.call(this, null, flush)
+        }
+        if (typeof pending[0] === 'string') {
+            return this.parse(pending.join(''))
+        }
+        try {
+            return nativeWritev.call(this, pending, flush)
+        } finally {
+            this._xmlSource = null
+        }
+    }
+
     feed(data, flush) {
         flush = !!flush
 
         if (data == null || data === undefined) {
             if (this._pendingChunks && this._pendingChunks.length > 0) {
-                if (typeof this._pendingChunks[0] === 'string') {
-                    this._xmlSource = this._pendingChunks.join('')
-                }
-                try {
-                    return nativeWritev.call(this, this._pendingChunks, flush)
-                } finally {
-                    this._xmlSource = null
-                    this._pendingChunks = null
-                }
+                return this._flushPending(flush)
             }
             return nativeFeed.call(this, data, flush)
         }
@@ -90,15 +100,7 @@ class SaxParser extends NativeSaxParser {
 
         if (this._pendingChunks) {
             this._pendingChunks.push(data)
-            if (typeof this._pendingChunks[0] === 'string') {
-                this._xmlSource = this._pendingChunks.join('')
-            }
-            try {
-                return nativeWritev.call(this, this._pendingChunks, flush)
-            } finally {
-                this._xmlSource = null
-                this._pendingChunks = null
-            }
+            return this._flushPending(flush)
         }
 
         if (typeof data === 'string') {
@@ -174,8 +176,8 @@ function markListenersDirty() {
     SaxParser.prototype[method] = function () {
         const result = original.apply(this, arguments)
         markListenersDirty.call(this)
+        // Defer refreshListenerCache until dispatch (ensureListenerCache).
         this._listenersDirty = true
-        refreshListenerCache(this)
         return result
     }
 })

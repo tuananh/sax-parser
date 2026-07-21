@@ -208,12 +208,9 @@ function buildUtf8ByteIndex(buffer) {
 }
 
 function isAsciiString(str) {
-    for (let i = 0, n = str.length; i < n; i++) {
-        if (str.charCodeAt(i) >= 0x80) {
-            return false
-        }
-    }
-    return true
+    // Buffer.byteLength is native and far cheaper than a JS charCodeAt scan
+    // over multi-KB documents (streaming / cold parse path).
+    return str.length === 0 || Buffer.byteLength(str, 'utf8') === str.length
 }
 
 function createStringSliceDecoder(str) {
@@ -361,8 +358,9 @@ function readAttributes(xmlDecoder, auxWordsView, byteOffset, parser) {
 function ensureXmlSlicer(parser, xmlSource) {
     if (parser._xmlSliceSource === xmlSource && parser._xmlSliceReady) {
         // Same source as a previous parse (benchmark reuses one string) — enable
-        // the offset→string cache. First visit stays cache-free so one-shot /
-        // streaming paths don't pay Map+GC cost for entries that are never reused.
+        // the offset→string cache. First visit stays cache-free: offset keys do
+        // not collide within one document (each "item" tag has a distinct offset),
+        // so a Map only pays off when the same string is parsed again.
         parser._useSliceCache = true
         return parser._xmlSlice
     }

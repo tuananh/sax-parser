@@ -324,11 +324,13 @@ void SaxParser::flushFeedSession(Napi::Env env)
     _xmlDispatchLength = _feedXml.size();
     _collectingDelegator.beginParse(_parser.get());
     _parser->parseMutable(_feedXml.data(), _feedXml.size());
-    _parseInput.assign(_feedXml.begin(), _feedXml.end());
-    _xmlDispatchBase = _parseInput.data();
-    _xmlDispatchLength = _parseInput.size();
-    _feedXml.clear();
+
+    // Dispatch while _feedXml is still alive — avoids copying into _parseInput.
+    // Hot path uses JS `_xmlSource` when set; otherwise offsets refer into this buffer.
     finishEventCollection(env);
+    _feedXml.clear();
+    _xmlDispatchBase = nullptr;
+    _xmlDispatchLength = 0;
     _feedSessionActive = false;
 }
 
@@ -377,10 +379,10 @@ void SaxParser::runWritev(const Napi::Array &chunks, bool flush)
     _registry->beginParse(_parser.get());
 
     const uint32_t chunkCount = chunks.Length();
+    Napi::Env env = _jsThis.Env();
 
     if (!_registry->hasAnyListeners())
     {
-        Napi::Env env = _jsThis.Env();
         for (uint32_t i = 0; i < chunkCount; i++)
         {
             Napi::Value chunk = chunks[i];
@@ -413,7 +415,19 @@ void SaxParser::runWritev(const Napi::Array &chunks, bool flush)
         beginEventCollection(nullptr, 0);
     }
 
-    Napi::Env env = _jsThis.Env();
+    // Reserve once to avoid repeated realloc while appending chunks.
+    size_t reserveBytes = _feedXml.size();
+    for (uint32_t i = 0; i < chunkCount; i++)
+    {
+        Napi::Value chunk = chunks[i];
+        if (chunk.IsBuffer())
+            reserveBytes += chunk.As<Napi::Buffer<char>>().Length();
+        else if (chunk.IsString())
+            reserveBytes += 256; // heuristic; Utf8Value will grow as needed
+    }
+    if (reserveBytes > _feedXml.capacity())
+        _feedXml.reserve(reserveBytes);
+
     for (uint32_t i = 0; i < chunkCount; i++)
         appendFeedChunk(chunks[i], env);
 
