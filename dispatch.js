@@ -39,6 +39,7 @@ const ERROR_CODES = {
 }
 
 const EMPTY_ATTRS = Object.freeze(Object.create(null))
+const NO_ARGS = []
 
 function slotEmpty(slot) {
     return !slot.single && !slot.multi
@@ -76,6 +77,26 @@ function listenerSlot(events, name) {
     return { single: null, multi: null, needsArgs: false }
 }
 
+function onlyElementTextListeners(cache) {
+    return (
+        slotEmpty(cache.startAttribute) &&
+        slotEmpty(cache.endAttribute) &&
+        slotEmpty(cache.cdata) &&
+        slotEmpty(cache.comment) &&
+        slotEmpty(cache.doctype) &&
+        slotEmpty(cache.error) &&
+        slotEmpty(cache.startXmlDeclAttr) &&
+        slotEmpty(cache.endXmlDeclAttr) &&
+        slotEmpty(cache.xmlDecl) &&
+        slotEmpty(cache.processingInstruction) &&
+        slotEmpty(cache.startDocument) &&
+        slotEmpty(cache.endDocument) &&
+        slotEmpty(cache.end) &&
+        slotEmpty(cache.finish) &&
+        slotEmpty(cache.done)
+    )
+}
+
 function refreshListenerCache(parser) {
     const events = parser._events || {}
     const cache = {
@@ -99,30 +120,19 @@ function refreshListenerCache(parser) {
         processingInstruction: listenerSlot(events, 'processingInstruction'),
     }
 
-    // Precompute eligibility for the element/text hot loop so dispatch does not
-    // re-walk inactive listener slots on every batch.
+    const start = cache.startElement
+    const end = cache.endElement
+    const text = cache.text
+    const elementTextOnly =
+        !!start.single && !!end.single && !!text.single && onlyElementTextListeners(cache)
+
+    // With-args hot path (benchmark shape).
     cache.elementTextHot =
-        !!cache.startElement.single &&
-        !!cache.endElement.single &&
-        !!cache.text.single &&
-        cache.startElement.needsArgs &&
-        cache.endElement.needsArgs &&
-        cache.text.needsArgs &&
-        slotEmpty(cache.startAttribute) &&
-        slotEmpty(cache.endAttribute) &&
-        slotEmpty(cache.cdata) &&
-        slotEmpty(cache.comment) &&
-        slotEmpty(cache.doctype) &&
-        slotEmpty(cache.error) &&
-        slotEmpty(cache.startXmlDeclAttr) &&
-        slotEmpty(cache.endXmlDeclAttr) &&
-        slotEmpty(cache.xmlDecl) &&
-        slotEmpty(cache.processingInstruction) &&
-        slotEmpty(cache.startDocument) &&
-        slotEmpty(cache.endDocument) &&
-        slotEmpty(cache.end) &&
-        slotEmpty(cache.finish) &&
-        slotEmpty(cache.done)
+        elementTextOnly && start.needsArgs && end.needsArgs && text.needsArgs
+
+    // Zero-arity compact hot path — skip invokeSlot / big switch.
+    cache.compactElementTextHot =
+        elementTextOnly && !start.needsArgs && !end.needsArgs && !text.needsArgs
 
     parser._listenerCache = cache
     parser._listenersDirty = false
@@ -447,57 +457,88 @@ function recordWords(recordBuffer) {
     )
 }
 
-function dispatchCompactEvents(parser, recordWords, eventCount) {
+function dispatchCompactEvents(parser, types, eventCount) {
     const cache = ensureListenerCache(parser)
 
-    for (let i = 0; i < eventCount; i++) {
-        switch (recordWords[i]) {
+    // Fast path: only start/end/text, each a single zero-arity listener.
+    if (cache.compactElementTextHot) {
+        const onStart = cache.startElement.single
+        const onEnd = cache.endElement.single
+        const onText = cache.text.single
+        for (let i = 0; i < eventCount; i++) {
+            const t = types[i]
+            if (t === EVENT.START_ELEMENT) {
+                onStart.call(parser)
+            } else if (t === EVENT.END_ELEMENT) {
+                onEnd.call(parser)
+            } else if (t === EVENT.TEXT) {
+                onText.call(parser)
+            } else {
+                // Unexpected event type — finish this batch via the slow path.
+                dispatchCompactSlow(parser, cache, types, i, eventCount)
+                return
+            }
+        }
+        return
+    }
+
+    dispatchCompactSlow(parser, cache, types, 0, eventCount)
+}
+
+function dispatchCompactSlow(parser, cache, types, startIndex, eventCount) {
+    for (let i = startIndex; i < eventCount; i++) {
+        switch (types[i]) {
             case EVENT.START_DOCUMENT:
-                invokeSlot(cache.startDocument, parser, [])
+                invokeSlot(cache.startDocument, parser, NO_ARGS)
                 break
             case EVENT.END_DOCUMENT:
-                invokeSlot(cache.endDocument, parser, [])
-                invokeSlot(cache.end, parser, [])
-                invokeSlot(cache.finish, parser, [])
-                invokeSlot(cache.done, parser, [])
+                invokeSlot(cache.endDocument, parser, NO_ARGS)
+                invokeSlot(cache.end, parser, NO_ARGS)
+                invokeSlot(cache.finish, parser, NO_ARGS)
+                invokeSlot(cache.done, parser, NO_ARGS)
                 break
             case EVENT.START_ELEMENT:
-                invokeSlot(cache.startElement, parser, [])
+                invokeSlot(cache.startElement, parser, NO_ARGS)
                 break
             case EVENT.END_ELEMENT:
-                invokeSlot(cache.endElement, parser, [])
+                invokeSlot(cache.endElement, parser, NO_ARGS)
                 break
             case EVENT.TEXT:
-                invokeSlot(cache.text, parser, [])
+                invokeSlot(cache.text, parser, NO_ARGS)
                 break
             case EVENT.CDATA:
-                invokeSlot(cache.cdata, parser, [])
+                invokeSlot(cache.cdata, parser, NO_ARGS)
                 break
             case EVENT.COMMENT:
-                invokeSlot(cache.comment, parser, [])
+                invokeSlot(cache.comment, parser, NO_ARGS)
                 break
             case EVENT.DOCTYPE:
-                invokeSlot(cache.doctype, parser, [])
+                invokeSlot(cache.doctype, parser, NO_ARGS)
                 break
             case EVENT.ERROR:
-                invokeSlot(cache.error, parser, [])
+                invokeSlot(cache.error, parser, NO_ARGS)
                 break
             case EVENT.START_ATTRIBUTE:
-                invokeSlot(cache.startAttribute, parser, [])
+                invokeSlot(cache.startAttribute, parser, NO_ARGS)
                 break
             case EVENT.END_ATTRIBUTE:
-                invokeSlot(cache.endAttribute, parser, [])
+                invokeSlot(cache.endAttribute, parser, NO_ARGS)
                 break
             case EVENT.XML_DECL:
-                invokeSlot(cache.xmlDecl, parser, [])
+                invokeSlot(cache.xmlDecl, parser, NO_ARGS)
                 break
             case EVENT.PROCESSING_INSTRUCTION:
-                invokeSlot(cache.processingInstruction, parser, [])
+                invokeSlot(cache.processingInstruction, parser, NO_ARGS)
                 break
             default:
                 break
         }
     }
+}
+
+function dispatchCompact(parser, recordBuffer) {
+    const eventCount = recordBuffer.byteLength >>> 2
+    dispatchCompactEvents(parser, recordWords(recordBuffer), eventCount)
 }
 
 function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, eventCount) {
@@ -565,9 +606,6 @@ function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, e
 }
 
 function readAsciiAttrsFresh(xml, attrsWords, byteOffset) {
-    if (byteOffset === EMPTY_ATTRS_OFFSET) {
-        return EMPTY_ATTRS
-    }
     let w = byteOffset >>> 2
     const count = attrsWords[w++]
     if (count === 0) {
@@ -597,21 +635,35 @@ function readAsciiAttrsFresh(xml, attrsWords, byteOffset) {
 }
 
 function readAsciiAttrsCached(xml, attrsWords, byteOffset, sliceCache, attrsCache) {
-    if (byteOffset === EMPTY_ATTRS_OFFSET) {
-        return EMPTY_ATTRS
-    }
-    let w = byteOffset >>> 2
-    const count = attrsWords[w++]
-    if (count === 0) {
-        return EMPTY_ATTRS
-    }
-
     const cached = attrsCache.get(byteOffset)
     if (cached !== undefined) {
         return cached
     }
 
+    let w = byteOffset >>> 2
+    const count = attrsWords[w++]
+    if (count === 0) {
+        attrsCache.set(byteOffset, EMPTY_ATTRS)
+        return EMPTY_ATTRS
+    }
+
     const attrs = Object.create(null)
+    if (count === 1) {
+        const nameLen = attrsWords[w++]
+        const valueLen = attrsWords[w++]
+        const nameOffset = attrsWords[w++]
+        const valueOffset = attrsWords[w++]
+        attrs[sliceCached(xml, nameOffset, nameLen, sliceCache, true)] = sliceCached(
+            xml,
+            valueOffset,
+            valueLen,
+            sliceCache,
+            true,
+        )
+        attrsCache.set(byteOffset, attrs)
+        return attrs
+    }
+
     for (let i = 0; i < count; i++) {
         const nameLen = attrsWords[w++]
         const valueLen = attrsWords[w++]
@@ -627,10 +679,6 @@ function readAsciiAttrsCached(xml, attrsWords, byteOffset, sliceCache, attrsCach
     }
     attrsCache.set(byteOffset, attrs)
     return attrs
-}
-
-function sliceAsciiFresh(xml, off, len) {
-    return len === 0 ? '' : xml.slice(off, off + len)
 }
 
 function sliceAsciiCached(xml, off, len, cache) {
@@ -649,21 +697,30 @@ function sliceAsciiCached(xml, off, len, cache) {
     return s
 }
 
-// First-visit ASCII hot loop: allocate attrs per element, no Map lookups.
+// First-visit ASCII hot loop: inline empty-attrs check; allocate only when needed.
 function dispatchAsciiHotFresh(parser, xml, records, attrsWords, eventCount, onStart, onEnd, onText) {
     const end = eventCount * 5
     for (let offset = 0; offset < end; offset += 5) {
         const type = records[offset]
         if (type === EVENT.START_ELEMENT) {
+            const nameOff = records[offset + 1]
+            const nameLen = records[offset + 2]
+            const attrOff = records[offset + 3]
             onStart.call(
                 parser,
-                sliceAsciiFresh(xml, records[offset + 1], records[offset + 2]),
-                readAsciiAttrsFresh(xml, attrsWords, records[offset + 3]),
+                nameLen === 0 ? '' : xml.slice(nameOff, nameOff + nameLen),
+                attrOff === EMPTY_ATTRS_OFFSET
+                    ? EMPTY_ATTRS
+                    : readAsciiAttrsFresh(xml, attrsWords, attrOff),
             )
         } else if (type === EVENT.END_ELEMENT) {
-            onEnd.call(parser, sliceAsciiFresh(xml, records[offset + 1], records[offset + 2]))
+            const nameOff = records[offset + 1]
+            const nameLen = records[offset + 2]
+            onEnd.call(parser, nameLen === 0 ? '' : xml.slice(nameOff, nameOff + nameLen))
         } else if (type === EVENT.TEXT) {
-            onText.call(parser, sliceAsciiFresh(xml, records[offset + 1], records[offset + 2]))
+            const textOff = records[offset + 1]
+            const textLen = records[offset + 2]
+            onText.call(parser, textLen === 0 ? '' : xml.slice(textOff, textOff + textLen))
         } else {
             return false
         }
@@ -688,16 +745,13 @@ function dispatchAsciiHotCached(
     for (let offset = 0; offset < end; offset += 5) {
         const type = records[offset]
         if (type === EVENT.START_ELEMENT) {
+            const attrOff = records[offset + 3]
             onStart.call(
                 parser,
                 sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
-                readAsciiAttrsCached(
-                    xml,
-                    attrsWords,
-                    records[offset + 3],
-                    sliceCache,
-                    attrsCache,
-                ),
+                attrOff === EMPTY_ATTRS_OFFSET
+                    ? EMPTY_ATTRS
+                    : readAsciiAttrsCached(xml, attrsWords, attrOff, sliceCache, attrsCache),
             )
         } else if (type === EVENT.END_ELEMENT) {
             onEnd.call(
@@ -767,13 +821,13 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
 
         switch (type) {
             case EVENT.START_DOCUMENT:
-                invokeSlot(cache.startDocument, parser, [])
+                invokeSlot(cache.startDocument, parser, NO_ARGS)
                 break
             case EVENT.END_DOCUMENT:
-                invokeSlot(cache.endDocument, parser, [])
-                invokeSlot(cache.end, parser, [])
-                invokeSlot(cache.finish, parser, [])
-                invokeSlot(cache.done, parser, [])
+                invokeSlot(cache.endDocument, parser, NO_ARGS)
+                invokeSlot(cache.end, parser, NO_ARGS)
+                invokeSlot(cache.finish, parser, NO_ARGS)
+                invokeSlot(cache.done, parser, NO_ARGS)
                 break
             case EVENT.START_ELEMENT:
                 if (cache.startElement.needsArgs) {
@@ -782,42 +836,42 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
                         readAttributes(xmlDecoder, attrsWords, arg2, parser),
                     ])
                 } else {
-                    invokeSlot(cache.startElement, parser, [])
+                    invokeSlot(cache.startElement, parser, NO_ARGS)
                 }
                 break
             case EVENT.END_ELEMENT:
                 if (cache.endElement.needsArgs) {
                     invokeSlot(cache.endElement, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    invokeSlot(cache.endElement, parser, [])
+                    invokeSlot(cache.endElement, parser, NO_ARGS)
                 }
                 break
             case EVENT.TEXT:
                 if (cache.text.needsArgs) {
                     invokeSlot(cache.text, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    invokeSlot(cache.text, parser, [])
+                    invokeSlot(cache.text, parser, NO_ARGS)
                 }
                 break
             case EVENT.CDATA:
                 if (cache.cdata.needsArgs) {
                     invokeSlot(cache.cdata, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    invokeSlot(cache.cdata, parser, [])
+                    invokeSlot(cache.cdata, parser, NO_ARGS)
                 }
                 break
             case EVENT.COMMENT:
                 if (cache.comment.needsArgs) {
                     invokeSlot(cache.comment, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    invokeSlot(cache.comment, parser, [])
+                    invokeSlot(cache.comment, parser, NO_ARGS)
                 }
                 break
             case EVENT.DOCTYPE:
                 if (cache.doctype.needsArgs) {
                     invokeSlot(cache.doctype, parser, [xmlDecoder.decode(arg0, arg1)])
                 } else {
-                    invokeSlot(cache.doctype, parser, [])
+                    invokeSlot(cache.doctype, parser, NO_ARGS)
                 }
                 break
             case EVENT.ERROR:
@@ -834,12 +888,12 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
                     attr[auxDecoder.decode(arg0, arg1)] = auxDecoder.decode(arg2, arg3)
                     invokeSlot(cache.startAttribute, parser, [attr])
                 } else {
-                    invokeSlot(cache.startAttribute, parser, [])
+                    invokeSlot(cache.startAttribute, parser, NO_ARGS)
                 }
                 break
             }
             case EVENT.END_ATTRIBUTE:
-                invokeSlot(cache.endAttribute, parser, [])
+                invokeSlot(cache.endAttribute, parser, NO_ARGS)
                 break
             case EVENT.XML_DECL:
                 if (cache.xmlDecl.needsArgs) {
@@ -847,7 +901,7 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
                         readAttributes(xmlDecoder, attrsWords, arg2, parser),
                     ])
                 } else {
-                    invokeSlot(cache.xmlDecl, parser, [])
+                    invokeSlot(cache.xmlDecl, parser, NO_ARGS)
                 }
                 break
             case EVENT.PROCESSING_INSTRUCTION:
@@ -859,7 +913,7 @@ function dispatchEvents(parser, xmlSource, recordBuffer, auxBuffer, eventCount, 
                         },
                     ])
                 } else {
-                    invokeSlot(cache.processingInstruction, parser, [])
+                    invokeSlot(cache.processingInstruction, parser, NO_ARGS)
                 }
                 break
             default:
@@ -881,6 +935,7 @@ function dispatchHot(parser, xmlSource, recordBuffer, auxBuffer) {
 module.exports = {
     dispatchEvents,
     dispatchHot,
+    dispatchCompact,
     refreshListenerCache,
     RECORD_BYTES,
 }

@@ -193,6 +193,12 @@ void SaxParser::ensureDispatchFns()
         if (hot.IsFunction())
             _dispatchHotFn = Napi::Persistent(hot.As<Napi::Function>());
     }
+    if (_dispatchCompactFn.IsEmpty())
+    {
+        Napi::Value compact = _jsThis.Get("_dispatchCompact");
+        if (compact.IsFunction())
+            _dispatchCompactFn = Napi::Persistent(compact.As<Napi::Function>());
+    }
     if (_dispatchEventsFn.IsEmpty())
     {
         Napi::Value events = _jsThis.Get("_dispatchEvents");
@@ -220,6 +226,13 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
     else
         recordBuffer = Napi::Buffer<uint8_t>::New(env, _dispatchRecords.data(),
                                                   _dispatchRecords.size(), noopFinalizer);
+
+    // Compact records: one uint32 type per event — no aux, no xml marshalling.
+    if (_registry->compactRecords() && !_dispatchCompactFn.IsEmpty())
+    {
+        _dispatchCompactFn.Call(_jsThis.Value(), {recordBuffer});
+        return;
+    }
 
     Napi::Buffer<uint8_t> auxBuffer;
     if (_dispatchAux.empty())

@@ -37,6 +37,7 @@ private:
 
     Napi::ObjectReference _jsThis;
     Napi::FunctionReference _dispatchHotFn;
+    Napi::FunctionReference _dispatchCompactFn;
     Napi::FunctionReference _dispatchEventsFn;
     std::unique_ptr<saxparser::SAXParser> _parser;
     std::unique_ptr<ListenerRegistry> _registry;
