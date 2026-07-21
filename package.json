@@ -46,7 +46,7 @@
     "node-addon-api": "^8.9.0"
   },
   "devDependencies": {
-    "@eksml/xml": "^0.1.5",
+    "@eksml/xml": "^0.2.0",
     "benchmark": "^2.1.4",
     "cross-env": "^10.1.0",
     "easysax": "^0.4.2",
