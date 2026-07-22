@@ -34,14 +34,14 @@ Results on Node.js v26.5.0, Linux x64:
 
 | module              | ops/sec | native | XML compliant | stream |
 | ------------------- | ------- | ------ | ------------- | ------ |
-| @tuananh/sax-parser | 15,590  | ✅     | ✅            | ✅     |
-| @eksml/xml          | 14,761  | ❌     | ✅            | ✅     |
-| saxophone           | 5,566   | ❌     | ✅            | ✅     |
-| easysax             | 5,268   | ❌     | ✅            | ✅     |
-| ltx                 | 3,890   | ❌     | ❌            | ✅     |
-| sax                 | 1,490   | ❌     | ✅            | ✅     |
+| @tuananh/sax-parser | 20,821  | ✅     | ✅            | ✅     |
+| @eksml/xml          | 15,495  | ❌     | ✅            | ✅     |
+| saxophone           | 5,951   | ❌     | ✅            | ✅     |
+| easysax             | 5,131   | ❌     | ✅            | ✅     |
+| ltx                 | 4,116   | ❌     | ❌            | ✅     |
+| sax                 | 1,522   | ❌     | ✅            | ✅     |
 | node-expat          | 1,224   | ✅     | ✅            | ✅     |
-| node-xml            | 742     | ❌     | ✅            | ✅     |
+| node-xml            | 735     | ❌     | ✅            | ✅     |
 
 ### Streaming (`npm run benchmark:streaming`)
 
@@ -49,14 +49,14 @@ Same document delivered in small chunks (fresh parser per iteration):
 
 | module              | 256 B chunks | 64 B chunks |
 | ------------------- | ------------ | ----------- |
-| @tuananh/sax-parser | 8,137        | 8,328       |
-| @eksml/xml          | 8,962        | 7,699       |
-| saxophone           | 4,910        | 3,959       |
-| easysax             | 4,555        | 4,177       |
-| ltx                 | 3,828        | 3,419       |
-| sax                 | 1,565        | 1,550       |
-| node-expat          | 1,166        | 1,081       |
-| node-xml            | 679          | 572         |
+| @tuananh/sax-parser | 8,484        | 8,560       |
+| @eksml/xml          | 9,237        | 8,045       |
+| saxophone           | 4,784        | 3,970       |
+| easysax             | 4,491        | 4,172       |
+| ltx                 | 3,813        | 3,222       |
+| sax                 | 1,597        | 1,579       |
+| node-expat          | 1,191        | 1,076       |
+| node-xml            | 679          | 587         |
 
 ops/sec: higher is better.
 
