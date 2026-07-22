@@ -24,7 +24,6 @@ SOFTWARE.
 #ifndef SIMDSOFT__XSXML_HPP
 #define SIMDSOFT__XSXML_HPP
 #pragma once
-#include <functional>
 #include <string>
 #include <cstring>
 #include <assert.h>
@@ -288,7 +287,7 @@ static const unsigned char chartypex_table[256] = {
     ++s;                                                                                           \
   }
 #define XSXML__THROW_ERROR(err, m)                                                                 \
-  return handler->xml_error_cb(err, m), error_offset = m, error_status = err,                      \
+  return handler->xml_error_cb(handler->user, err, m), error_offset = m, error_status = err,        \
                                         static_cast<char_t*>(0)
 #define XSXML__CHECK_ERROR(err, m)                                                                 \
   {                                                                                                \
@@ -934,23 +933,25 @@ private:
   size_t _Mysize;
 };
 
-// The sax3 parse callbacks
+// The sax3 parse callbacks — raw function pointers (no std::function).
+// `user` is passed as the first argument to every callback.
 struct xml_sax3_parse_cb
 {
-  std::function<void(char* name, size_t)> xml_start_element_cb;
-  std::function<void(const char* name, size_t, const char* value, size_t)> xml_attr_cb;
-  std::function<void()> xml_end_attr_cb;
-  std::function<void()> xml_start_document_cb;
-  std::function<void(const char* name, size_t)> xml_end_element_cb;
-  std::function<void(const char* text, size_t len)> xml_text_cb;
-  std::function<void(const char* text, size_t len)> xml_cdata_cb;
-  std::function<void(const char* text, size_t)> xml_comment_cb;
-  std::function<void()> xml_end_document_cb;
-  std::function<void(const char* text, size_t)> xml_doctype_cb;
-  std::function<void(xml_parse_status, char*)> xml_error_cb;
-  std::function<void(const char* name, size_t, const char* value, size_t)> xml_decl_attr_cb;
-  std::function<void()> xml_end_decl_attr_cb;
-  std::function<void(const char* target, size_t, const char* data, size_t)> xml_pi_cb;
+  void* user = nullptr;
+  void (*xml_start_element_cb)(void* user, char* name, size_t) = nullptr;
+  void (*xml_attr_cb)(void* user, const char* name, size_t, const char* value, size_t) = nullptr;
+  void (*xml_end_attr_cb)(void* user) = nullptr;
+  void (*xml_start_document_cb)(void* user) = nullptr;
+  void (*xml_end_element_cb)(void* user, const char* name, size_t) = nullptr;
+  void (*xml_text_cb)(void* user, const char* text, size_t len) = nullptr;
+  void (*xml_cdata_cb)(void* user, const char* text, size_t len) = nullptr;
+  void (*xml_comment_cb)(void* user, const char* text, size_t) = nullptr;
+  void (*xml_end_document_cb)(void* user) = nullptr;
+  void (*xml_doctype_cb)(void* user, const char* text, size_t) = nullptr;
+  void (*xml_error_cb)(void* user, xml_parse_status, char*) = nullptr;
+  void (*xml_decl_attr_cb)(void* user, const char* name, size_t, const char* value, size_t) = nullptr;
+  void (*xml_end_decl_attr_cb)(void* user) = nullptr;
+  void (*xml_pi_cb)(void* user, const char* target, size_t, const char* data, size_t) = nullptr;
 };
 
 /////////////// xml_sax3_parser ///////////
@@ -1133,7 +1134,7 @@ struct xml_sax3_parser
             XSXML__THROW_ERROR(status_bad_comment, value);
           
           // TODO(anh): I don't know why it's NULL terminated sometimes
-          handler->xml_comment_cb(mark, s - mark - (s[1] == 0 ? 2 : 3 )); // skip last 3 char -->
+          handler->xml_comment_cb(handler->user, mark, s - mark - (s[1] == 0 ? 2 : 3 )); // skip last 3 char -->
         }
         else
         {
@@ -1185,7 +1186,7 @@ struct xml_sax3_parser
           ++s;
         }
         // TODO(anh): why minus one here?
-        handler->xml_cdata_cb(mark, s - mark - 1);
+        handler->xml_cdata_cb(handler->user, mark, s - mark - 1);
         s += (s[1] == '>' ? 2 : 1); // Step over the last ']>'.
       }
       else
@@ -1206,7 +1207,7 @@ struct xml_sax3_parser
       if (!s)
         return s;
 
-      handler->xml_doctype_cb(mark, s - mark);
+      handler->xml_doctype_cb(handler->user, mark, s - mark);
 
       assert((*s == 0 && endch == '>') || *s == '>');
       if (*s)
@@ -1283,11 +1284,11 @@ struct xml_sax3_parser
 
         if (declaration)
         {
-          handler->xml_end_decl_attr_cb();
+          handler->xml_end_decl_attr_cb(handler->user);
         }
         else
         {
-          handler->xml_pi_cb(target, s - target - 1, s, 0);
+          handler->xml_pi_cb(handler->user, target, s - target - 1, s, 0);
         }
         // XSXML__POPNODE();
       }
@@ -1339,14 +1340,14 @@ struct xml_sax3_parser
                   if (!s)
                     XSXML__THROW_ERROR(status_bad_attribute, value);
 
-                  handler->xml_decl_attr_cb(mark, n, value, s - value - 1);
+                  handler->xml_decl_attr_cb(handler->user, mark, n, value, s - value - 1);
 
                   // After this line the loop continues from the start;
                   // Whitespaces, / and > are ok, symbols and EOF are wrong,
                   // everything else will be detected
                   if (XSXML__IS_CHARTYPE(*s, ct_start_symbol))
                     XSXML__THROW_ERROR(status_bad_attribute, s);
-                  // handler->xml_attr_cb(mark, n, value, s - value - 1);
+                  // handler->xml_attr_cb(handler->user, mark, n, value, s - value - 1);
                 }
               }
             }
@@ -1354,7 +1355,7 @@ struct xml_sax3_parser
             {
               ++s;
               ++s; // move pass 2 chars ?>
-              handler->xml_end_decl_attr_cb();
+              handler->xml_end_decl_attr_cb(handler->user);
               break;
             }
             else if (*s == 0 && endch == '>')
@@ -1389,7 +1390,7 @@ struct xml_sax3_parser
             XSXML__CHECK_ERROR(status_bad_pi, s);
 
             s += (s[1] == '>' ? 2 : 1);
-            handler->xml_pi_cb(target, mark - target - 1, mark, s - mark - 1);
+            handler->xml_pi_cb(handler->user, target, mark - target - 1, mark, s - mark - 1);
           }
           else if (*s == '?')
           {
@@ -1455,7 +1456,7 @@ struct xml_sax3_parser
 
     fixed_stack<string_view, parse_max_deep> stk; // 4K on 32bits, 6K on 64bits
 
-    handler->xml_start_document_cb();
+    handler->xml_start_document_cb(handler->user);
     while (*s != 0)
     {
       if (*s == '<')
@@ -1472,14 +1473,14 @@ struct xml_sax3_parser
 
           XSXML__SCANWHILE_UNROLL(XSXML__IS_CHARTYPE(ss, ct_symbol)); // Scan for a terminator.
 
-          handler->xml_start_element_cb(mark, s - mark);
+          handler->xml_start_element_cb(handler->user, mark, s - mark);
           stk.push(::xsxml::string_view(mark, s - mark));
 
           XSXML__ENDSEG(); // Save char in 'ch', terminate & step over.
 
           if (ch == '>')
           {
-            handler->xml_end_attr_cb(); // end of tag
+            handler->xml_end_attr_cb(handler->user); // end of tag
           }
           else if (XSXML__IS_CHARTYPE(ch, ct_space))
           {
@@ -1528,7 +1529,7 @@ struct xml_sax3_parser
                     // everything else will be detected
                     if (XSXML__IS_CHARTYPE(*s, ct_start_symbol))
                       XSXML__THROW_ERROR(status_bad_attribute, s);
-                    handler->xml_attr_cb(mark, n, value, s - value - 1);
+                    handler->xml_attr_cb(handler->user, mark, n, value, s - value - 1);
                   }
                   else
                     XSXML__THROW_ERROR(status_bad_attribute, s);
@@ -1542,16 +1543,16 @@ struct xml_sax3_parser
                 if (*s == '>')
                 {
                   auto ele_name = stk.pop();
-                  handler->xml_end_attr_cb();
-                  handler->xml_end_element_cb(ele_name.c_str(), ele_name.length());
+                  handler->xml_end_attr_cb(handler->user);
+                  handler->xml_end_element_cb(handler->user, ele_name.c_str(), ele_name.length());
                   ++s;
                   break;
                 }
                 else if (*s == 0 && endch == '>')
                 {
                   auto ele_name = stk.pop();
-                  handler->xml_end_attr_cb();
-                  handler->xml_end_element_cb(ele_name.c_str(), ele_name.length());
+                  handler->xml_end_attr_cb(handler->user);
+                  handler->xml_end_element_cb(handler->user, ele_name.c_str(), ele_name.length());
                   break;
                 }
                 else
@@ -1560,7 +1561,7 @@ struct xml_sax3_parser
               else if (*s == '>')
               {
                 ++s;
-                handler->xml_end_attr_cb();
+                handler->xml_end_attr_cb(handler->user);
                 break;
               }
               else if (*s == 0 && endch == '>')
@@ -1579,15 +1580,15 @@ struct xml_sax3_parser
               XSXML__THROW_ERROR(status_bad_start_element, s);
 
             stk.pop();
-            handler->xml_end_attr_cb();
-            handler->xml_end_element_cb(mark, s - mark - 1);
+            handler->xml_end_attr_cb(handler->user);
+            handler->xml_end_element_cb(handler->user, mark, s - mark - 1);
             s += (*s == '>');
           }
           else if (ch == 0)
           {
             // we stepped over null terminator, backtrack & handle closing tag
             --s;
-            handler->xml_end_attr_cb();
+            handler->xml_end_attr_cb(handler->user);
             if (endch != '>')
               XSXML__THROW_ERROR(status_bad_start_element, s);
           }
@@ -1605,7 +1606,7 @@ struct xml_sax3_parser
             ++s;
 
           stk.pop();
-          handler->xml_end_element_cb(mark, s - mark);
+          handler->xml_end_element_cb(handler->user, mark, s - mark);
 
           XSXML__SKIPWS();
 
@@ -1698,7 +1699,7 @@ struct xml_sax3_parser
           if (!*s)
             break;
 
-          handler->xml_text_cb(mark, s - mark);
+          handler->xml_text_cb(handler->user, mark, s - mark);
 
           ++s;
         }
@@ -1710,7 +1711,7 @@ struct xml_sax3_parser
 
     // SAX3: TODO: check that last tag is closed,
     // if (cursor != root) XSXML__THROW_ERROR(status_end_element_mismatch, s);
-    handler->xml_end_document_cb();
+    handler->xml_end_document_cb(handler->user);
 
     return s;
   }
@@ -1761,7 +1762,7 @@ struct xml_sax3_parser
 
     if (parse_has_utf8_bom(buffer_data))
     {
-      handler->xml_error_cb(status_bad_pcdata, buffer_data);
+      handler->xml_error_cb(handler->user, status_bad_pcdata, buffer_data);
       return make_parse_result(status_bad_pcdata, buffer_data - buffer);
     }
 

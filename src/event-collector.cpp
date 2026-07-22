@@ -82,13 +82,20 @@ void EventCollector::pushEvent(uint32_t type, uint32_t arg0, uint32_t arg1, uint
 {
     if (_compactRecords)
     {
+        // Capacity is over-reserved in beginEventCollection; grow only if needed.
+        if (_records.size() == _records.capacity())
+            _records.reserve(_records.capacity() == 0 ? 64 : _records.capacity() * 2);
         _records.push_back(type);
     }
     else
     {
         // Direct word stores — avoids per-field memcpy through a uint8_t buffer.
+        // When capacity is sufficient (warm path), bump size without reallocation.
         const size_t base = _records.size();
-        _records.resize(base + 5);
+        const size_t need = base + 5;
+        if (need > _records.capacity())
+            _records.reserve(need + (need >> 1));
+        _records.resize(need);
         uint32_t *p = _records.data() + base;
         p[0] = type;
         p[1] = arg0;

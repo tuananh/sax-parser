@@ -18,6 +18,13 @@ const EVENT = {
 
 const RECORD_BYTES = 20
 
+// Interned decimal strings for short ASCII numeric attr/text values.
+// Avoids allocating "0".."999" repeatedly (common for id-like attributes).
+const DIGIT_STRINGS = new Array(1000)
+for (let i = 0; i < 1000; i++) {
+    DIGIT_STRINGS[i] = String(i)
+}
+
 const ERROR_CODES = {
     0: 'OK',
     2: 'ERR_IO',
@@ -147,8 +154,33 @@ function refreshListenerCache(parser) {
     cache.compactElementTextHot =
         elementTextOnly && !start.needsArgs && !end.needsArgs && !text.needsArgs
 
+    // Bound once so the hot loop can use a direct call instead of .call.
+    cache.boundStart = null
+    cache.boundEnd = null
+    cache.boundText = null
+    cache.boundForParser = null
+
     parser._listenerCache = cache
     parser._listenersDirty = false
+}
+
+function ensureBoundHotListeners(parser, cache, onStart, onEnd, onText) {
+    if (
+        cache.boundForParser === parser &&
+        cache.boundStart &&
+        cache._onStart === onStart &&
+        cache._onEnd === onEnd &&
+        cache._onText === onText
+    ) {
+        return
+    }
+    cache.boundForParser = parser
+    cache._onStart = onStart
+    cache._onEnd = onEnd
+    cache._onText = onText
+    cache.boundStart = onStart.bind(parser)
+    cache.boundEnd = onEnd.bind(parser)
+    cache.boundText = onText.bind(parser)
 }
 
 function ensureListenerCache(parser) {
@@ -476,14 +508,18 @@ function dispatchCompactEvents(parser, types, eventCount) {
         const onStart = cache.startElement.single
         const onEnd = cache.endElement.single
         const onText = cache.text.single
+        ensureBoundHotListeners(parser, cache, onStart, onEnd, onText)
+        const boundStart = cache.boundStart
+        const boundEnd = cache.boundEnd
+        const boundText = cache.boundText
         for (let i = 0; i < eventCount; i++) {
             const t = types[i]
             if (t === EVENT.START_ELEMENT) {
-                onStart.call(parser)
+                boundStart()
             } else if (t === EVENT.END_ELEMENT) {
-                onEnd.call(parser)
+                boundEnd()
             } else if (t === EVENT.TEXT) {
-                onText.call(parser)
+                boundText()
             } else {
                 // Unexpected event type — finish this batch via the slow path.
                 dispatchCompactSlow(parser, cache, types, i, eventCount)
@@ -565,32 +601,35 @@ function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, e
     const onStart = cache.startElement.single
     const onEnd = cache.endElement.single
     const onText = cache.text.single
+    ensureBoundHotListeners(parser, cache, onStart, onEnd, onText)
+    const boundStart = cache.boundStart
+    const boundEnd = cache.boundEnd
+    const boundText = cache.boundText
 
     // Fastest path: ASCII JS string — byte offsets == char offsets.
     if (parser._xmlSliceAscii && typeof xmlSource === 'string') {
         if (parser._useSliceCache) {
             return dispatchAsciiHotCached(
-                parser,
                 xmlSource,
                 records,
                 attrsWords,
                 eventCount,
-                onStart,
-                onEnd,
-                onText,
+                boundStart,
+                boundEnd,
+                boundText,
                 parser._sliceCache,
+                parser._attrsCache,
                 wantAttrs,
             )
         }
         return dispatchAsciiHotFresh(
-            parser,
             xmlSource,
             records,
             attrsWords,
             eventCount,
-            onStart,
-            onEnd,
-            onText,
+            boundStart,
+            boundEnd,
+            boundText,
             wantAttrs,
         )
     }
@@ -603,24 +642,20 @@ function tryElementTextHotDispatch(parser, xmlSource, recordBuffer, auxBuffer, e
                 const name = slice(records[offset + 1], records[offset + 2])
                 if (!wantAttrs) {
                     if (startArity === 0) {
-                        onStart.call(parser)
+                        boundStart()
                     } else {
-                        onStart.call(parser, name)
+                        boundStart(name)
                     }
                 } else {
-                    onStart.call(
-                        parser,
-                        name,
-                        readAttributes(decoder, attrsWords, records[offset + 3], parser),
-                    )
+                    boundStart(name, readAttributes(decoder, attrsWords, records[offset + 3], parser))
                 }
                 break
             }
             case EVENT.END_ELEMENT:
-                onEnd.call(parser, slice(records[offset + 1], records[offset + 2]))
+                boundEnd(slice(records[offset + 1], records[offset + 2]))
                 break
             case EVENT.TEXT:
-                onText.call(parser, slice(records[offset + 1], records[offset + 2]))
+                boundText(slice(records[offset + 1], records[offset + 2]))
                 break
             default:
                 return false
@@ -662,6 +697,11 @@ function readAsciiAttrsFresh(xml, attrsWords, byteOffset) {
 // Match against a small set of interned ASCII names without allocating.
 // Safe: returns immutable string constants; fall back to slice on miss.
 function asciiSliceName(xml, off, len) {
+    const named = asciiSliceNameOrNull(xml, off, len)
+    return named !== null ? named : xml.slice(off, off + len)
+}
+
+function asciiSliceNameOrNull(xml, off, len) {
     if (len === 2) {
         // "id"
         if (xml.charCodeAt(off) === 105 && xml.charCodeAt(off + 1) === 100) {
@@ -696,20 +736,76 @@ function asciiSliceName(xml, off, len) {
             ) {
                 return 'root'
             }
+        } else if (c0 === 116) {
+            // "type"
+            if (
+                xml.charCodeAt(off + 1) === 121 &&
+                xml.charCodeAt(off + 2) === 112 &&
+                xml.charCodeAt(off + 3) === 101
+            ) {
+                return 'type'
+            }
         }
     } else if (len === 5) {
-        // "value"
-        if (
-            xml.charCodeAt(off) === 118 &&
-            xml.charCodeAt(off + 1) === 97 &&
-            xml.charCodeAt(off + 2) === 108 &&
-            xml.charCodeAt(off + 3) === 117 &&
-            xml.charCodeAt(off + 4) === 101
-        ) {
-            return 'value'
+        // "value" / "xmlns"
+        const c0 = xml.charCodeAt(off)
+        if (c0 === 118) {
+            if (
+                xml.charCodeAt(off + 1) === 97 &&
+                xml.charCodeAt(off + 2) === 108 &&
+                xml.charCodeAt(off + 3) === 117 &&
+                xml.charCodeAt(off + 4) === 101
+            ) {
+                return 'value'
+            }
+        } else if (c0 === 120) {
+            if (
+                xml.charCodeAt(off + 1) === 109 &&
+                xml.charCodeAt(off + 2) === 108 &&
+                xml.charCodeAt(off + 3) === 110 &&
+                xml.charCodeAt(off + 4) === 115
+            ) {
+                return 'xmlns'
+            }
+        }
+    } else if (len === 3) {
+        // "ref" / "src" / "key"
+        const c0 = xml.charCodeAt(off)
+        if (c0 === 114) {
+            if (xml.charCodeAt(off + 1) === 101 && xml.charCodeAt(off + 2) === 102) {
+                return 'ref'
+            }
+        } else if (c0 === 115) {
+            if (xml.charCodeAt(off + 1) === 114 && xml.charCodeAt(off + 2) === 99) {
+                return 'src'
+            }
+        } else if (c0 === 107) {
+            if (xml.charCodeAt(off + 1) === 101 && xml.charCodeAt(off + 2) === 121) {
+                return 'key'
+            }
         }
     }
-    return xml.slice(off, off + len)
+    return null
+}
+
+// Intern short all-digit ASCII values ("0".."999"); otherwise slice.
+// Rejects leading zeros on multi-digit strings so "01" stays exact.
+function tryAsciiDigit(xml, off, len) {
+    if (len === 0 || len > 3) {
+        return null
+    }
+    let n = 0
+    for (let i = 0; i < len; i++) {
+        const c = xml.charCodeAt(off + i)
+        if (c < 48 || c > 57) {
+            return null
+        }
+        n = n * 10 + (c - 48)
+    }
+    if (len > 1 && xml.charCodeAt(off) === 48) {
+        return null
+    }
+    return DIGIT_STRINGS[n]
 }
 
 function readAsciiAttrsCached(xml, attrsWords, byteOffset, sliceCache, attrsCache) {
@@ -763,10 +859,23 @@ function sliceAsciiCached(xml, off, len, cache) {
     if (len === 0) {
         return ''
     }
+    // Map first — warm same-string parses hit here without scanning.
     const key = off * 0x10000 + len
     let s = cache.get(key)
     if (s !== undefined) {
         return s
+    }
+    const digit = tryAsciiDigit(xml, off, len)
+    if (digit !== null) {
+        cache.set(key, digit)
+        return digit
+    }
+    if (len >= 2 && len <= 5) {
+        const named = asciiSliceNameOrNull(xml, off, len)
+        if (named !== null) {
+            cache.set(key, named)
+            return named
+        }
     }
     s = xml.slice(off, off + len)
     if (len <= 64) {
@@ -775,11 +884,11 @@ function sliceAsciiCached(xml, off, len, cache) {
     return s
 }
 
-// First-visit ASCII hot loop. Arity matches invokeSlot: attrs only when length >= 2.
+// First-visit ASCII hot loop. Listeners are pre-bound to the parser so the
+// loop can use a direct call (faster than fn.call(parser, ...)).
 // Attribute objects are always freshly allocated (never pooled) so retained
 // listener references stay stable.
 function dispatchAsciiHotFresh(
-    parser,
     xml,
     records,
     attrsWords,
@@ -797,15 +906,15 @@ function dispatchAsciiHotFresh(
             if (type === EVENT.START_ELEMENT) {
                 const nameOff = records[offset + 1]
                 const nameLen = records[offset + 2]
-                onStart.call(parser, nameLen === 0 ? '' : asciiSliceName(xml, nameOff, nameLen))
+                onStart(nameLen === 0 ? '' : asciiSliceName(xml, nameOff, nameLen))
             } else if (type === EVENT.END_ELEMENT) {
                 const nameOff = records[offset + 1]
                 const nameLen = records[offset + 2]
-                onEnd.call(parser, nameLen === 0 ? '' : asciiSliceName(xml, nameOff, nameLen))
+                onEnd(nameLen === 0 ? '' : asciiSliceName(xml, nameOff, nameLen))
             } else if (type === EVENT.TEXT) {
                 const textOff = records[offset + 1]
                 const textLen = records[offset + 2]
-                onText.call(parser, textLen === 0 ? '' : xml.slice(textOff, textOff + textLen))
+                onText(textLen === 0 ? '' : xml.slice(textOff, textOff + textLen))
             } else {
                 return false
             }
@@ -819,8 +928,7 @@ function dispatchAsciiHotFresh(
             const nameOff = records[offset + 1]
             const nameLen = records[offset + 2]
             const attrOff = records[offset + 3]
-            onStart.call(
-                parser,
+            onStart(
                 nameLen === 0 ? '' : asciiSliceName(xml, nameOff, nameLen),
                 attrOff === EMPTY_ATTRS_OFFSET
                     ? EMPTY_ATTRS
@@ -829,11 +937,11 @@ function dispatchAsciiHotFresh(
         } else if (type === EVENT.END_ELEMENT) {
             const nameOff = records[offset + 1]
             const nameLen = records[offset + 2]
-            onEnd.call(parser, nameLen === 0 ? '' : asciiSliceName(xml, nameOff, nameLen))
+            onEnd(nameLen === 0 ? '' : asciiSliceName(xml, nameOff, nameLen))
         } else if (type === EVENT.TEXT) {
             const textOff = records[offset + 1]
             const textLen = records[offset + 2]
-            onText.call(parser, textLen === 0 ? '' : xml.slice(textOff, textOff + textLen))
+            onText(textLen === 0 ? '' : xml.slice(textOff, textOff + textLen))
         } else {
             return false
         }
@@ -843,7 +951,6 @@ function dispatchAsciiHotFresh(
 
 // Repeat-visit ASCII hot loop: slice + attrs object caches keyed by source offset.
 function dispatchAsciiHotCached(
-    parser,
     xml,
     records,
     attrsWords,
@@ -852,29 +959,20 @@ function dispatchAsciiHotCached(
     onEnd,
     onText,
     sliceCache,
+    attrsCache,
     wantAttrs,
 ) {
-    const attrsCache = parser._attrsCache
     const end = eventCount * 5
 
     if (!wantAttrs) {
         for (let offset = 0; offset < end; offset += 5) {
             const type = records[offset]
             if (type === EVENT.START_ELEMENT) {
-                onStart.call(
-                    parser,
-                    sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
-                )
+                onStart(sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache))
             } else if (type === EVENT.END_ELEMENT) {
-                onEnd.call(
-                    parser,
-                    sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
-                )
+                onEnd(sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache))
             } else if (type === EVENT.TEXT) {
-                onText.call(
-                    parser,
-                    sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
-                )
+                onText(sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache))
             } else {
                 return false
             }
@@ -886,23 +984,16 @@ function dispatchAsciiHotCached(
         const type = records[offset]
         if (type === EVENT.START_ELEMENT) {
             const attrOff = records[offset + 3]
-            onStart.call(
-                parser,
+            onStart(
                 sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
                 attrOff === EMPTY_ATTRS_OFFSET
                     ? EMPTY_ATTRS
                     : readAsciiAttrsCached(xml, attrsWords, attrOff, sliceCache, attrsCache),
             )
         } else if (type === EVENT.END_ELEMENT) {
-            onEnd.call(
-                parser,
-                sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
-            )
+            onEnd(sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache))
         } else if (type === EVENT.TEXT) {
-            onText.call(
-                parser,
-                sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache),
-            )
+            onText(sliceAsciiCached(xml, records[offset + 1], records[offset + 2], sliceCache))
         } else {
             return false
         }
