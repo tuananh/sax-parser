@@ -31,4 +31,46 @@ describe('CDATA test', () => {
             ['endElement', 'family'],
         ])
     })
+
+    test('handles CDATA with special characters', async () => {
+        expect(await parse('<a><![CDATA[a && b < c > d]]></a>')).toEqual([
+            ['startElement', 'a', {}],
+            ['cdata', 'a && b < c > d'],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('does not decode entities inside CDATA', async () => {
+        expect(await parse('<a><![CDATA[&amp;]]></a>')).toEqual([
+            ['startElement', 'a', {}],
+            ['cdata', '&amp;'],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('text before and after CDATA', async () => {
+        expect(await parse('<a>before<![CDATA[mid]]>after</a>')).toEqual([
+            ['startElement', 'a', {}],
+            ['text', 'before'],
+            ['cdata', 'mid'],
+            ['text', 'after'],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('CDATA containing just 0', async () => {
+        expect(await parse('<a><![CDATA[0]]></a>')).toEqual([
+            ['startElement', 'a', {}],
+            ['cdata', '0'],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('CDATA end sequence with extra ]', async () => {
+        expect(await parse('<a><![CDATA[a]]]></a>')).toEqual([
+            ['startElement', 'a', {}],
+            ['cdata', 'a]'],
+            ['endElement', 'a'],
+        ])
+    })
 })

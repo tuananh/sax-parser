@@ -10,6 +10,45 @@ describe('doctype test', () => {
         ])
     })
 
+    test('does not emit DOCTYPE as startElement', async () => {
+        const events = await parse('<!DOCTYPE html><html></html>')
+        expect(events.filter((e) => e[0] === 'startElement')).toEqual([
+            ['startElement', 'html', {}],
+        ])
+        expect(events.find((e) => e[0] === 'doctype')).toEqual([
+            'doctype',
+            'html',
+        ])
+    })
+
+    test('DOCTYPE with internal subset', async () => {
+        expect(
+            await parse(
+                '<!DOCTYPE root [<!ELEMENT root (#PCDATA)>]><root>text</root>',
+            ),
+        ).toEqual([
+            ['doctype', 'root [<!ELEMENT root (#PCDATA)>]'],
+            ['startElement', 'root', {}],
+            ['text', 'text'],
+            ['endElement', 'root'],
+        ])
+    })
+
+    test('DOCTYPE with PUBLIC and SYSTEM identifiers', async () => {
+        expect(
+            await parse(
+                '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html/>',
+            ),
+        ).toEqual([
+            [
+                'doctype',
+                'html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"',
+            ],
+            ['startElement', 'html', {}],
+            ['endElement', 'html'],
+        ])
+    })
+
     test('doctype welform => should not throw', async () => {
         const xmls = [
             `<!DOCTYPE doc>`,

@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="A complex XHTML test fixture with scripts, styles, comments, and mixed content"/>
+  <meta name="author" content="Test Suite"/>
+  <title>XHTML Fixture — Complex Document</title>
+  <link rel="stylesheet" type="text/css" href="/css/main.css"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="alternate" type="application/atom+xml" title="Feed" href="/feed.atom"/>
+  <style type="text/css">
+<![CDATA[
+    /* Reset and base styles */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #1a1a2e; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+    /* Navigation */
+    nav.primary { background: #16213e; padding: 1rem 0; }
+    nav.primary a { color: #e2e2e2; text-decoration: none; }
+    nav.primary a:hover { color: #0f3460; background: #e2e2e2; }
+    /* <tag> inside CSS comment should not break parser */
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; }
+    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    /* Grid layout */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    /* Code blocks */
+    pre > code { display: block; padding: 1rem; background: #0a0a23; color: #d4d4d4; overflow-x: auto; }
+]]>
+  </style>
+</head>
+<body>
+  <!-- ========================================
+       Primary Navigation
+       ======================================== -->
+  <nav class="primary" role="navigation" aria-label="Main navigation">
+    <div class="container">
+      <a href="/" class="logo" aria-label="Home">
+        <img src="/logo.svg" alt="Site Logo" width="32" height="32"/>
+      </a>
+      <ul>
+        <li><a href="/docs">Documentation</a></li>
+        <li><a href="/api" class="active">API Reference</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="/community">Community</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ========================================
+       Hero Section
+       ======================================== -->
+  <header id="hero" class="hero-section" data-theme="dark" role="banner">
+    <div class="container">
+      <h1>Complex XHTML <em>Test</em> Fixture</h1>
+      <p class="subtitle">This document exercises many XML/XHTML features: namespaces, scripts,
+        styles, comments, mixed content, entities (&amp;, &lt;, &gt;, &quot;, &apos;),
+        CDATA sections, deeply nested structures, and self-closing elements.</p>
+      <div class="cta-group">
+        <a href="#getting-started" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/example/repo" class="btn btn-secondary" rel="noopener noreferrer" target="_blank">GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="content" role="main">
+    <!-- ========================================
+         Getting Started Section
+         ======================================== -->
+    <section id="getting-started" class="section" aria-labelledby="gs-heading">
+      <div class="container">
+        <h2 id="gs-heading">Getting Started</h2>
+
+        <div class="grid">
+          <div class="card" id="card-install">
+            <h3>Installation</h3>
+            <p>Install the package using your preferred package manager:</p>
+            <pre><code class="language-bash">npm install eksml
+# or
+pnpm add eksml
+# or
+yarn add eksml</code></pre>
+          </div>
+
+          <div class="card" id="card-usage">
+            <h3>Basic Usage</h3>
+            <p>Parse an XML string into a DOM-like tree:</p>
+            <pre><code class="language-typescript">import { parse, simplify } from 'eksml';
+
+const dom = parse('&lt;root&gt;&lt;item id="1"&gt;Hello&lt;/item&gt;&lt;/root&gt;');
+const simple = simplify(dom);
+console.log(simple.root.item); // "Hello"</code></pre>
+          </div>
+
+          <div class="card" id="card-streaming">
+            <h3>Streaming</h3>
+            <p>Process large XML documents with constant memory:</p>
+            <pre><code class="language-typescript">import { XmlParseStream } from 'eksml/stream';
+
+const stream = new XmlParseStream();
+const writer = stream.writable.getWriter();
+const reader = stream.readable.getReader();
+
+await writer.write('&lt;items&gt;&lt;item&gt;1&lt;/item&gt;');
+await writer.write('&lt;item&gt;2&lt;/item&gt;&lt;/items&gt;');
+await writer.close();</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         Features Table
+         ======================================== -->
+    <section id="features" class="section" aria-labelledby="features-heading">
+      <div class="container">
+        <h2 id="features-heading">Feature Comparison</h2>
+        <table class="feature-table" role="grid" aria-describedby="table-desc">
+          <caption id="table-desc">Comparison of XML parser features across popular libraries</caption>
+          <thead>
+            <tr>
+              <th scope="col">Feature</th>
+              <th scope="col">eksml</th>
+              <th scope="col">fast-xml-parser</th>
+              <th scope="col">xml2js</th>
+              <th scope="col">sax</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Streaming</td>
+              <td data-supported="true">Yes</td>
+              <td data-supported="false">No</td>
+              <td data-supported="false">No</td>
+              <td data-supported="true">Yes</td>
+            </tr>
+            <tr>
+              <td>Web Streams API</td>
+              <td data-supported="true">Yes</td>
+              <td data-supported="false">No</td>
+              <td data-supported="false">No</td>
+              <td data-supported="false">No</td>
+            </tr>
+            <tr>
+              <td>TypeScript Native</td>
+              <td data-supported="true">Yes</td>
+              <td data-supported="true">Yes</td>
+              <td data-supported="false">No</td>
+              <td data-supported="false">No</td>
+            </tr>
+            <tr>
+              <td>Zero Dependencies</td>
+              <td data-supported="true">Yes</td>
+              <td data-supported="true">Yes</td>
+              <td data-supported="false">No</td>
+              <td data-supported="true">Yes</td>
+            </tr>
+            <tr>
+              <td>Browser Compatible</td>
+              <td data-supported="true">Yes</td>
+              <td data-supported="true">Yes</td>
+              <td data-supported="false">No</td>
+              <td data-supported="true">Yes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================
+         Nested Article with Mixed Content
+         ======================================== -->
+    <section id="deep-dive" class="section">
+      <div class="container">
+        <article class="blog-post" lang="en" itemscope="" itemtype="https://schema.org/BlogPosting">
+          <header>
+            <h2 itemprop="headline">Understanding XML Parsing Internals</h2>
+            <div class="meta">
+              <time itemprop="datePublished" datetime="2025-03-31T10:00:00Z">March 31, 2025</time>
+              <span class="separator">·</span>
+              <span itemprop="author" itemscope="" itemtype="https://schema.org/Person">
+                <span itemprop="name">Jane Doe</span>
+              </span>
+              <span class="separator">·</span>
+              <span class="reading-time">8 min read</span>
+            </div>
+          </header>
+
+          <div itemprop="articleBody">
+            <p>XML parsing involves several distinct phases. The <dfn>lexer</dfn> breaks the input
+              into tokens, while the <dfn>parser</dfn> assembles those tokens into a tree structure.
+              Let's explore how each phase works.</p>
+
+            <h3>Phase 1: Lexical Analysis</h3>
+            <p>The lexer scans the input character-by-character, identifying:</p>
+            <dl>
+              <dt>Open tags</dt>
+              <dd>Sequences matching <code>&lt;tagName</code> followed by optional attributes and <code>&gt;</code></dd>
+              <dt>Close tags</dt>
+              <dd>Sequences matching <code>&lt;/tagName&gt;</code></dd>
+              <dt>Self-closing tags</dt>
+              <dd>Tags ending with <code>/&gt;</code> like <code>&lt;br/&gt;</code></dd>
+              <dt>Text content</dt>
+              <dd>Any content between tags</dd>
+              <dt>Comments</dt>
+              <dd>Content wrapped in <code>&lt;!-- ... --&gt;</code></dd>
+              <dt>CDATA sections</dt>
+              <dd>Raw content in <code>&lt;![CDATA[ ... ]]&gt;</code></dd>
+              <dt>Processing instructions</dt>
+              <dd>Directives like <code>&lt;?xml version="1.0"?&gt;</code></dd>
+            </dl>
+
+            <h3>Phase 2: Tree Construction</h3>
+            <p>Once tokens are identified, the parser maintains a <em>stack</em> of open elements.
+              Each open tag pushes onto the stack; each close tag pops and validates.</p>
+
+            <aside class="callout" role="note">
+              <p><strong>Note:</strong> Self-closing tags (configured via <code>selfClosingTags</code>)
+                never push onto the stack. They're immediately completed.</p>
+            </aside>
+
+            <h3>Phase 3: Streaming Considerations</h3>
+            <p>When parsing incrementally via <code>XmlParseStream</code>, we face an additional
+              challenge: the input arrives in arbitrary chunks. A single XML element might span
+              multiple chunks. The parser handles this by:</p>
+            <ol>
+              <li>Buffering incoming chunks</li>
+              <li>Scanning for the next <code>&lt;</code> character</li>
+              <li>Attempting to parse a complete node from that position</li>
+              <li>Only emitting the node if the parser consumed data within bounds</li>
+              <li>Deferring incomplete nodes until more data arrives</li>
+            </ol>
+
+            <!-- Diagram rendered as structured data -->
+            <figure id="fig-pipeline">
+              <div class="diagram" aria-label="Parser pipeline diagram">
+                <div class="stage" data-step="1">
+                  <span class="label">Input</span>
+                  <span class="desc">Raw XML string chunks</span>
+                </div>
+                <div class="stage" data-step="2">
+                  <span class="label">Buffer</span>
+                  <span class="desc">Concatenated pending data</span>
+                </div>
+                <div class="stage" data-step="3">
+                  <span class="label">Scanner</span>
+                  <span class="desc">Find next &lt; boundary</span>
+                </div>
+                <div class="stage" data-step="4">
+                  <span class="label">Parser</span>
+                  <span class="desc">parseNode() with setPos</span>
+                </div>
+                <div class="stage" data-step="5">
+                  <span class="label">Output</span>
+                  <span class="desc">TNode emitted downstream</span>
+                </div>
+              </div>
+              <figcaption>Figure 1: The streaming XML parser pipeline</figcaption>
+            </figure>
+          </div>
+
+          <footer>
+            <div class="tags">
+              <a href="/tags/xml" class="tag" rel="tag">xml</a>
+              <a href="/tags/parsing" class="tag" rel="tag">parsing</a>
+              <a href="/tags/streaming" class="tag" rel="tag">streaming</a>
+              <a href="/tags/typescript" class="tag" rel="tag">typescript</a>
+            </div>
+          </footer>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================
+       Footer
+       ======================================== -->
+  <footer id="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="grid">
+        <div class="footer-col">
+          <h4>Project</h4>
+          <ul>
+            <li><a href="/docs">Documentation</a></li>
+            <li><a href="/api">API Reference</a></li>
+            <li><a href="/changelog">Changelog</a></li>
+            <li><a href="/roadmap">Roadmap</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Community</h4>
+          <ul>
+            <li><a href="https://github.com/example/eksml" rel="noopener">GitHub</a></li>
+            <li><a href="https://discord.gg/example" rel="noopener">Discord</a></li>
+            <li><a href="https://twitter.com/example" rel="noopener">Twitter</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+            <li><a href="/license">MIT License</a></li>
+          </ul>
+        </div>
+      </div>
+      <hr/>
+      <p class="copyright">Copyright &#169; 2025 Example Org. All rights reserved.
+        Built with &#10084; and TypeScript.</p>
+    </div>
+  </footer>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "XHTML Fixture",
+    "description": "Complex test document"
+  }
+  </script>
+  <script type="text/javascript">
+<![CDATA[
+    // Analytics — contains <script> and </script> as strings that must not confuse the parser
+    (function() {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.example.com/analytics.js';
+      s.async = true;
+      document.head.appendChild(s);
+    })();
+]]>
+  </script>
+</body>
+</html>

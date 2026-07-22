@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+               xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+               xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+               xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+  <soap:Header>
+    <wsse:Security soap:mustUnderstand="1">
+      <wsu:Timestamp wsu:Id="TS-1">
+        <wsu:Created>2025-03-31T12:00:00.000Z</wsu:Created>
+        <wsu:Expires>2025-03-31T12:05:00.000Z</wsu:Expires>
+      </wsu:Timestamp>
+      <wsse:UsernameToken wsu:Id="UsernameToken-1">
+        <wsse:Username>svc-account</wsse:Username>
+        <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest">dGVzdHBhc3N3b3Jk</wsse:Password>
+        <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">YWJjZGVmZw==</wsse:Nonce>
+        <wsu:Created>2025-03-31T12:00:00.000Z</wsu:Created>
+      </wsse:UsernameToken>
+      <ds:Signature>
+        <ds:SignedInfo>
+          <ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+          <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+          <ds:Reference URI="#TS-1">
+            <ds:Transforms>
+              <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+            </ds:Transforms>
+            <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+            <ds:DigestValue>abc123def456==</ds:DigestValue>
+          </ds:Reference>
+          <ds:Reference URI="#Body-1">
+            <ds:Transforms>
+              <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+            </ds:Transforms>
+            <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+            <ds:DigestValue>xyz789ghi012==</ds:DigestValue>
+          </ds:Reference>
+        </ds:SignedInfo>
+        <ds:SignatureValue>MIIB4DCCAYagAwIBAgIQfake==</ds:SignatureValue>
+        <ds:KeyInfo>
+          <wsse:SecurityTokenReference>
+            <wsse:Reference URI="#X509Token-1" ValueType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3"/>
+          </wsse:SecurityTokenReference>
+        </ds:KeyInfo>
+      </ds:Signature>
+    </wsse:Security>
+    <!-- Correlation ID for distributed tracing -->
+    <CorrelationId xmlns="http://example.com/correlation">a1b2c3d4-e5f6-7890-abcd-ef1234567890</CorrelationId>
+  </soap:Header>
+  <soap:Body wsu:Id="Body-1">
+    <GetOrderDetailsRequest xmlns="http://example.com/orders/v2">
+      <OrderId>ORD-2025-0331-00042</OrderId>
+      <IncludeLineItems>true</IncludeLineItems>
+      <IncludeShipments>true</IncludeShipments>
+      <Options>
+        <Currency>USD</Currency>
+        <Locale>en-US</Locale>
+        <ExpandReferences>true</ExpandReferences>
+        <MaxDepth>5</MaxDepth>
+      </Options>
+      <Filters>
+        <DateRange>
+          <From>2025-01-01T00:00:00Z</From>
+          <To>2025-03-31T23:59:59Z</To>
+        </DateRange>
+        <StatusCodes>
+          <Status>CONFIRMED</Status>
+          <Status>SHIPPED</Status>
+          <Status>DELIVERED</Status>
+        </StatusCodes>
+        <CustomerSegments>
+          <Segment priority="high">ENTERPRISE</Segment>
+          <Segment priority="medium">PREMIUM</Segment>
+        </CustomerSegments>
+      </Filters>
+      <Pagination>
+        <PageSize>50</PageSize>
+        <PageToken>eyJsYXN0SWQiOiJPUkQtMjAyNS0wMzMwLTk5OTk5In0=</PageToken>
+      </Pagination>
+    </GetOrderDetailsRequest>
+  </soap:Body>
+</soap:Envelope>

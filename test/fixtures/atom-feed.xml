@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:media="http://search.yahoo.com/mrss/"
+      xmlns:georss="http://www.georss.org/georss"
+      xmlns:gml="http://www.opengis.net/gml"
+      xml:lang="en">
+  <title type="text">Open Source Project Releases</title>
+  <subtitle type="html">&lt;em&gt;Tracking&lt;/em&gt; major open source releases worldwide</subtitle>
+  <id>urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6</id>
+  <link href="https://releases.example.org/" rel="alternate" type="text/html"/>
+  <link href="https://releases.example.org/feed.atom" rel="self" type="application/atom+xml"/>
+  <link href="https://releases.example.org/feed.atom?page=2" rel="next" type="application/atom+xml"/>
+  <link href="https://pubsubhubbub.example.com/" rel="hub"/>
+  <updated>2025-03-31T18:30:00Z</updated>
+  <author>
+    <name>Release Bot</name>
+    <email>releases@example.org</email>
+    <uri>https://example.org/bot</uri>
+  </author>
+  <contributor>
+    <name>Community Maintainers</name>
+  </contributor>
+  <generator uri="https://example.org/generator" version="3.2.1">ReleaseTracker</generator>
+  <icon>https://releases.example.org/favicon.ico</icon>
+  <logo>https://releases.example.org/logo.svg</logo>
+  <rights type="text">Copyright (c) 2025, Example Org. CC BY-SA 4.0</rights>
+  <category term="software" scheme="https://example.org/categories" label="Software"/>
+  <category term="open-source" label="Open Source"/>
+
+  <entry>
+    <title>TypeScript 6.0 Released</title>
+    <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
+    <link href="https://releases.example.org/typescript/6.0" rel="alternate" type="text/html"/>
+    <link href="https://releases.example.org/typescript/6.0.json" rel="alternate" type="application/json"/>
+    <link href="https://releases.example.org/typescript/6.0/comments" rel="replies" type="text/html" count="42"/>
+    <updated>2025-03-31T18:30:00Z</updated>
+    <published>2025-03-31T10:00:00Z</published>
+    <author>
+      <name>TypeScript Team</name>
+      <uri>https://www.typescriptlang.org</uri>
+    </author>
+    <category term="typescript" label="TypeScript"/>
+    <category term="languages" label="Programming Languages"/>
+    <summary type="text">Major release with isolated declarations, decorator metadata, and more.</summary>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <h2>TypeScript 6.0 Highlights</h2>
+        <p>This release brings several <strong>major improvements</strong>:</p>
+        <ul>
+          <li>Isolated declarations for faster builds</li>
+          <li>Decorator metadata support</li>
+          <li><code>using</code> keyword for resource management</li>
+          <li>Improved type narrowing in control flow</li>
+        </ul>
+        <figure>
+          <img src="https://releases.example.org/ts6-benchmark.png" alt="TypeScript 6.0 build benchmarks" width="800" height="400"/>
+          <figcaption>Build performance improvements in TS 6.0</figcaption>
+        </figure>
+        <details>
+          <summary>Breaking Changes</summary>
+          <ul>
+            <li>Minimum Node.js version is now 18.0</li>
+            <li>Removed deprecated <code>--out</code> flag</li>
+            <li>Strict null checks are now on by default</li>
+          </ul>
+        </details>
+      </div>
+    </content>
+    <media:group>
+      <media:content url="https://releases.example.org/ts6-thumb.png" type="image/png" medium="image" width="320" height="180"/>
+      <media:description>TypeScript 6.0 release thumbnail</media:description>
+    </media:group>
+    <georss:point>37.4220 -122.0841</georss:point>
+  </entry>
+
+  <entry>
+    <title>Rust 1.85 — Stabilizing async closures</title>
+    <id>urn:uuid:2345d786-efab-5678-bbbb-91eb455ffa7b</id>
+    <link href="https://releases.example.org/rust/1.85" rel="alternate"/>
+    <updated>2025-03-28T14:00:00Z</updated>
+    <published>2025-03-28T09:00:00Z</published>
+    <author>
+      <name>Rust Release Team</name>
+      <uri>https://www.rust-lang.org</uri>
+    </author>
+    <category term="rust"/>
+    <category term="systems-programming"/>
+    <summary>Async closures, improved borrow checker diagnostics, and new standard library APIs.</summary>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <h2>What's New in Rust 1.85</h2>
+        <p>The flagship feature of this release is the stabilization of <strong>async closures</strong>:</p>
+        <pre><code class="language-rust">let fetch = async |url: &amp;str| -&gt; Result&lt;Response, Error&gt; {
+    client.get(url).await
+};</code></pre>
+        <h3>Standard Library</h3>
+        <table>
+          <thead><tr><th>API</th><th>Status</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>AsyncFn</code></td><td>Stable</td><td>Core async closure trait</td></tr>
+            <tr><td><code>Vec::extract_if</code></td><td>Stable</td><td>Replaces <code>drain_filter</code></td></tr>
+            <tr><td><code>Cell::update</code></td><td>Stable</td><td>In-place cell mutation</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </content>
+    <georss:where>
+      <gml:Point>
+        <gml:pos>47.6062 -122.3321</gml:pos>
+      </gml:Point>
+    </georss:where>
+  </entry>
+
+  <entry>
+    <title>Node.js 24 LTS — "Orinoco"</title>
+    <id>urn:uuid:3456e897-fabc-6789-cccc-a2fc566ggb8c</id>
+    <link href="https://releases.example.org/node/24" rel="alternate"/>
+    <updated>2025-03-25T16:00:00Z</updated>
+    <published>2025-03-25T08:00:00Z</published>
+    <author>
+      <name>Node.js Release Working Group</name>
+    </author>
+    <category term="nodejs"/>
+    <category term="runtime"/>
+    <summary>V8 13.2, native TypeScript stripping, and Permission Model GA.</summary>
+    <content type="html">&lt;h2&gt;Node.js 24 LTS&lt;/h2&gt;&lt;p&gt;Key features include:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;V8 engine 13.2&lt;/li&gt;&lt;li&gt;Native &lt;code&gt;.ts&lt;/code&gt; file support (type stripping)&lt;/li&gt;&lt;li&gt;Permission Model is now stable (GA)&lt;/li&gt;&lt;li&gt;WebSocket client is unflagged&lt;/li&gt;&lt;li&gt;&lt;code&gt;URLPattern&lt;/code&gt; global available&lt;/li&gt;&lt;/ul&gt;</content>
+  </entry>
+</feed>

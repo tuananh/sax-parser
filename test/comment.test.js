@@ -51,4 +51,30 @@ describe('comment test', () => {
             ['endElement', 'hello'],
         ])
     })
+
+    test('handles multi-line comments', async () => {
+        expect(await parse('<!--\n  multi\n  line\n--><a/>')).toEqual([
+            ['comment', '\n  multi\n  line\n'],
+            ['startElement', 'a', {}],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('handles comments between sibling elements', async () => {
+        expect(await parse('<a/><!-- mid --><b/>')).toEqual([
+            ['startElement', 'a', {}],
+            ['endElement', 'a'],
+            ['comment', ' mid '],
+            ['startElement', 'b', {}],
+            ['endElement', 'b'],
+        ])
+    })
+
+    test('handles extra dashes inside a comment', async () => {
+        expect(await parse('<!-- -----><a/>')).toEqual([
+            ['comment', ' ---'],
+            ['startElement', 'a', {}],
+            ['endElement', 'a'],
+        ])
+    })
 })

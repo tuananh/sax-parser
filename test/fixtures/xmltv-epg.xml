@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<tv generator-info-name="eksml-test-epg" source-info-name="test-listings" source-info-url="https://example.com/epg">
+
+  <!-- Channels -->
+  <channel id="bbc1.uk">
+    <display-name lang="en">BBC One</display-name>
+    <display-name lang="en">BBC 1</display-name>
+    <icon src="https://example.com/logos/bbc1.png" width="120" height="120"/>
+    <url>https://www.bbc.co.uk/bbcone</url>
+  </channel>
+
+  <channel id="bbc2.uk">
+    <display-name lang="en">BBC Two</display-name>
+    <icon src="https://example.com/logos/bbc2.png"/>
+  </channel>
+
+  <channel id="itv1.uk">
+    <display-name lang="en">ITV</display-name>
+    <display-name lang="en">ITV 1</display-name>
+    <icon src="https://example.com/logos/itv1.png"/>
+    <url>https://www.itv.com</url>
+  </channel>
+
+  <channel id="ch4.uk">
+    <display-name lang="en">Channel 4</display-name>
+    <icon src="https://example.com/logos/ch4.png"/>
+  </channel>
+
+  <channel id="five.uk">
+    <display-name lang="en">Channel 5</display-name>
+    <icon src="https://example.com/logos/five.png"/>
+  </channel>
+
+  <channel id="sky-news.uk">
+    <display-name lang="en">Sky News</display-name>
+    <icon src="https://example.com/logos/sky-news.png"/>
+    <url>https://news.sky.com</url>
+  </channel>
+
+  <channel id="dave.uk">
+    <display-name lang="en">Dave</display-name>
+    <icon src="https://example.com/logos/dave.png"/>
+  </channel>
+
+  <channel id="film4.uk">
+    <display-name lang="en">Film4</display-name>
+    <icon src="https://example.com/logos/film4.png"/>
+  </channel>
+
+  <!-- BBC One - Evening Schedule -->
+  <programme start="20260403180000 +0100" stop="20260403183000 +0100" channel="bbc1.uk">
+    <title lang="en">BBC News at Six</title>
+    <desc lang="en">The latest national and international news stories from the BBC, with reports from correspondents worldwide.</desc>
+    <category lang="en">News</category>
+    <episode-num system="onscreen">S1E152</episode-num>
+  </programme>
+
+  <programme start="20260403183000 +0100" stop="20260403190000 +0100" channel="bbc1.uk">
+    <title lang="en">The One Show</title>
+    <desc lang="en">Topical magazine show featuring celebrity interviews, consumer stories, and live music performances.</desc>
+    <category lang="en">Entertainment</category>
+  </programme>
+
+  <programme start="20260403190000 +0100" stop="20260403200000 +0100" channel="bbc1.uk">
+    <title lang="en">EastEnders</title>
+    <desc lang="en">Drama unfolds in Walford as the residents of Albert Square face new challenges and old rivalries resurface.</desc>
+    <category lang="en">Drama</category>
+    <category lang="en">Soap</category>
+    <episode-num system="xmltv_ns">41.102.</episode-num>
+  </programme>
+
+  <programme start="20260403200000 +0100" stop="20260403210000 +0100" channel="bbc1.uk">
+    <title lang="en">MasterChef</title>
+    <desc lang="en">The remaining contestants face their toughest challenge yet in the semi-final, cooking a three-course meal for twenty diners.</desc>
+    <category lang="en">Food</category>
+    <episode-num system="onscreen">S22E34</episode-num>
+  </programme>
+
+  <programme start="20260403210000 +0100" stop="20260403220000 +0100" channel="bbc1.uk">
+    <title lang="en">BBC News at Ten</title>
+    <desc lang="en">The day's top stories. National and international news, with in-depth analysis and expert commentary.</desc>
+    <category lang="en">News</category>
+  </programme>
+
+  <!-- BBC Two - Evening Schedule -->
+  <programme start="20260403180000 +0100" stop="20260403183000 +0100" channel="bbc2.uk">
+    <title lang="en">Eggheads</title>
+    <desc lang="en">Quiz show pitting a team of challengers against the formidable Eggheads.</desc>
+    <category lang="en">Quiz</category>
+  </programme>
+
+  <programme start="20260403183000 +0100" stop="20260403190000 +0100" channel="bbc2.uk">
+    <title lang="en">Great British Menu</title>
+    <desc lang="en">Chefs compete to cook a banquet dish celebrating British culinary traditions.</desc>
+    <category lang="en">Food</category>
+  </programme>
+
+  <programme start="20260403190000 +0100" stop="20260403200000 +0100" channel="bbc2.uk">
+    <title lang="en">Springwatch</title>
+    <desc lang="en">Live wildlife cameras capture the drama of spring across the British countryside.</desc>
+    <category lang="en">Nature</category>
+  </programme>
+
+  <programme start="20260403200000 +0100" stop="20260403210000 +0100" channel="bbc2.uk">
+    <title lang="en">QI</title>
+    <desc lang="en">Sandi Toksvig hosts the panel show where obscure facts and unlikely answers score the most points.</desc>
+    <category lang="en">Comedy</category>
+    <episode-num system="onscreen">S24E08</episode-num>
+  </programme>
+
+  <!-- ITV - Evening Schedule -->
+  <programme start="20260403180000 +0100" stop="20260403183000 +0100" channel="itv1.uk">
+    <title lang="en">ITV News at 6</title>
+    <desc lang="en">National and regional news, sport and weather updates.</desc>
+    <category lang="en">News</category>
+  </programme>
+
+  <programme start="20260403183000 +0100" stop="20260403190000 +0100" channel="itv1.uk">
+    <title lang="en">Emmerdale</title>
+    <desc lang="en">Life in the Yorkshire Dales village brings drama, romance, and conflict to its close-knit community.</desc>
+    <category lang="en">Drama</category>
+    <category lang="en">Soap</category>
+  </programme>
+
+  <programme start="20260403190000 +0100" stop="20260403200000 +0100" channel="itv1.uk">
+    <title lang="en">Coronation Street</title>
+    <desc lang="en">Secrets are revealed on the cobbles as the residents of Weatherfield navigate love, loss, and neighbourhood gossip.</desc>
+    <category lang="en">Drama</category>
+    <category lang="en">Soap</category>
+  </programme>
+
+  <programme start="20260403200000 +0100" stop="20260403220000 +0100" channel="itv1.uk">
+    <title lang="en">Vera</title>
+    <desc lang="en">Detective Chief Inspector Vera Stanhope investigates a suspicious death at a remote Northumberland coastal village.</desc>
+    <category lang="en">Crime</category>
+    <category lang="en">Drama</category>
+    <episode-num system="onscreen">S14E03</episode-num>
+  </programme>
+
+  <!-- Channel 4 - Evening Schedule -->
+  <programme start="20260403180000 +0100" stop="20260403190000 +0100" channel="ch4.uk">
+    <title lang="en">Channel 4 News</title>
+    <desc lang="en">In-depth analysis of the day's news stories with Jon Snow and the reporting team.</desc>
+    <category lang="en">News</category>
+  </programme>
+
+  <programme start="20260403190000 +0100" stop="20260403200000 +0100" channel="ch4.uk">
+    <title lang="en">The Great British Bake Off</title>
+    <desc lang="en">The bakers face pastry week with a challenging technical and a spectacular showstopper.</desc>
+    <category lang="en">Food</category>
+    <category lang="en">Entertainment</category>
+    <episode-num system="onscreen">S15E06</episode-num>
+  </programme>
+
+  <programme start="20260403200000 +0100" stop="20260403210000 +0100" channel="ch4.uk">
+    <title lang="en">Taskmaster</title>
+    <desc lang="en">Five comedians tackle bizarre and inventive tasks set by the Taskmaster and his loyal assistant.</desc>
+    <category lang="en">Comedy</category>
+    <category lang="en">Entertainment</category>
+    <episode-num system="onscreen">S18E04</episode-num>
+  </programme>
+
+  <!-- Channel 5 - Evening Schedule -->
+  <programme start="20260403180000 +0100" stop="20260403190000 +0100" channel="five.uk">
+    <title lang="en">5 News at 5</title>
+    <desc lang="en">The latest headlines and breaking news.</desc>
+    <category lang="en">News</category>
+  </programme>
+
+  <programme start="20260403190000 +0100" stop="20260403200000 +0100" channel="five.uk">
+    <title lang="en">GPs: Behind Closed Doors</title>
+    <desc lang="en">Cameras follow doctors and patients at a busy GP surgery in the heart of England.</desc>
+    <category lang="en">Documentary</category>
+  </programme>
+
+  <programme start="20260403200000 +0100" stop="20260403220000 +0100" channel="five.uk">
+    <title lang="en">Ben Fogle: New Lives in the Wild</title>
+    <desc lang="en">Ben Fogle visits a couple who left their city lives behind to build a self-sufficient homestead in rural Wales.</desc>
+    <category lang="en">Documentary</category>
+    <episode-num system="onscreen">S21E07</episode-num>
+  </programme>
+
+  <!-- Sky News - Rolling Coverage -->
+  <programme start="20260403180000 +0100" stop="20260403190000 +0100" channel="sky-news.uk">
+    <title lang="en">Sky News at Six</title>
+    <desc lang="en">A comprehensive look at the day's biggest stories, with live reports and expert analysis.</desc>
+    <category lang="en">News</category>
+  </programme>
+
+  <programme start="20260403190000 +0100" stop="20260403200000 +0100" channel="sky-news.uk">
+    <title lang="en">Sky News Tonight</title>
+    <desc lang="en">In-depth reporting and interviews on the stories that matter.</desc>
+    <category lang="en">News</category>
+  </programme>
+
+  <programme start="20260403200000 +0100" stop="20260403220000 +0100" channel="sky-news.uk">
+    <title lang="en">Sky News Documentary: The Climate Files</title>
+    <desc lang="en">An investigation into how governments and corporations are responding to the escalating climate crisis, featuring exclusive interviews and leaked documents.</desc>
+    <category lang="en">News</category>
+    <category lang="en">Documentary</category>
+  </programme>
+
+  <!-- Dave - Evening Schedule -->
+  <programme start="20260403180000 +0100" stop="20260403190000 +0100" channel="dave.uk">
+    <title lang="en">Would I Lie to You?</title>
+    <desc lang="en">Lee Mack and David Mitchell's teams try to fool each other with outrageous truths and convincing lies.</desc>
+    <category lang="en">Comedy</category>
+    <category lang="en">Panel Show</category>
+  </programme>
+
+  <programme start="20260403190000 +0100" stop="20260403200000 +0100" channel="dave.uk">
+    <title lang="en">Mock the Week</title>
+    <desc lang="en">Comedians take on the week's biggest news stories with sharp wit and topical humour.</desc>
+    <category lang="en">Comedy</category>
+    <category lang="en">Panel Show</category>
+  </programme>
+
+  <programme start="20260403200000 +0100" stop="20260403210000 +0100" channel="dave.uk">
+    <title lang="en">Red Dwarf</title>
+    <desc lang="en">Lister, Rimmer, Cat, and Kryten encounter a derelict ship with a cargo of simulants in deep space.</desc>
+    <category lang="en">Comedy</category>
+    <category lang="en">Sci-Fi</category>
+    <episode-num system="onscreen">S13E04</episode-num>
+  </programme>
+
+  <programme start="20260403210000 +0100" stop="20260403220000 +0100" channel="dave.uk">
+    <title lang="en">QI XL</title>
+    <desc lang="en">The extended version of the hit panel show with additional questions and even more quite interesting facts.</desc>
+    <category lang="en">Comedy</category>
+  </programme>
+
+  <!-- Film4 - Evening Films -->
+  <programme start="20260403183000 +0100" stop="20260403205500 +0100" channel="film4.uk">
+    <title lang="en">Blade Runner 2049</title>
+    <desc lang="en">Officer K, a new blade runner for the LAPD, unearths a long-buried secret that has the potential to plunge what's left of society into chaos. Denis Villeneuve's stunning sequel to the 1982 sci-fi classic.</desc>
+    <category lang="en">Film</category>
+    <category lang="en">Sci-Fi</category>
+    <date>2017</date>
+    <star-rating>
+      <value>8.0/10</value>
+    </star-rating>
+    <length units="minutes">164</length>
+    <credits>
+      <director>Denis Villeneuve</director>
+      <actor>Ryan Gosling</actor>
+      <actor>Harrison Ford</actor>
+      <actor>Ana de Armas</actor>
+    </credits>
+  </programme>
+
+  <programme start="20260403210000 +0100" stop="20260403230500 +0100" channel="film4.uk">
+    <title lang="en">Arrival</title>
+    <desc lang="en">When mysterious spacecraft touch down across the globe, a linguistics professor is tasked with interpreting the language of the alien visitors. Denis Villeneuve directs this thought-provoking sci-fi drama.</desc>
+    <category lang="en">Film</category>
+    <category lang="en">Sci-Fi</category>
+    <date>2016</date>
+    <star-rating>
+      <value>7.9/10</value>
+    </star-rating>
+    <length units="minutes">116</length>
+    <credits>
+      <director>Denis Villeneuve</director>
+      <actor>Amy Adams</actor>
+      <actor>Jeremy Renner</actor>
+      <actor>Forest Whitaker</actor>
+    </credits>
+  </programme>
+
+</tv>

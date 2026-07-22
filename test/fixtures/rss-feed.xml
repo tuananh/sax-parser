@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Tech Engineering Blog</title>
+    <link>https://example.com/blog</link>
+    <description>Latest posts from the engineering team</description>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 31 Mar 2025 12:00:00 +0000</lastBuildDate>
+    <atom:link href="https://example.com/blog/feed.xml" rel="self" type="application/rss+xml"/>
+    <image>
+      <url>https://example.com/logo.png</url>
+      <title>Tech Engineering Blog</title>
+      <link>https://example.com/blog</link>
+      <width>144</width>
+      <height>144</height>
+    </image>
+    <item>
+      <title>Migrating to Web Streams</title>
+      <link>https://example.com/blog/web-streams</link>
+      <guid isPermaLink="true">https://example.com/blog/web-streams</guid>
+      <pubDate>Mon, 31 Mar 2025 12:00:00 +0000</pubDate>
+      <dc:creator>Alice</dc:creator>
+      <category>Streams</category>
+      <category>JavaScript</category>
+      <category>Performance</category>
+      <description><![CDATA[<p>Learn how we <strong>migrated</strong> from Node.js streams to the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Streams_API">Web Streams API</a> for universal compatibility.</p>]]></description>
+      <content:encoded><![CDATA[
+        <article>
+          <h1>Migrating to Web Streams</h1>
+          <p>The <code>TransformStream</code> API provides a universal streaming primitive that works in browsers, Node.js 18+, Deno, and Bun.</p>
+          <pre><code>const stream = new TransformStream({
+  transform(chunk, controller) {
+    controller.enqueue(chunk.toUpperCase());
+  }
+});</code></pre>
+          <h2>Benefits</h2>
+          <ul>
+            <li>Universal runtime support</li>
+            <li>No polyfills needed on modern platforms</li>
+            <li>Built-in backpressure handling</li>
+          </ul>
+          <blockquote>
+            <p>"Web Streams are the future of I/O in JavaScript." — <cite>TC39 Committee</cite></p>
+          </blockquote>
+          <!-- TODO: Add performance benchmarks section -->
+          <h2>Migration Checklist</h2>
+          <ol>
+            <li>Replace <code>require('stream')</code> with <code>TransformStream</code></li>
+            <li>Update transform logic from <code>_transform</code> to <code>transform</code></li>
+            <li>Add <code>flush</code> handler for buffered data</li>
+          </ol>
+        </article>
+      ]]></content:encoded>
+    </item>
+    <item>
+      <title>XML Parsing at Scale: Lessons Learned</title>
+      <link>https://example.com/blog/xml-parsing</link>
+      <guid isPermaLink="true">https://example.com/blog/xml-parsing</guid>
+      <pubDate>Sun, 23 Mar 2025 08:30:00 +0000</pubDate>
+      <dc:creator>Bob &amp; Carol</dc:creator>
+      <category>XML</category>
+      <category>Parsing</category>
+      <description><![CDATA[<p>We process <em>millions</em> of XML documents daily. Here's what we've learned about incremental parsing &amp; memory efficiency.</p>]]></description>
+      <content:encoded><![CDATA[
+        <article>
+          <h1>XML Parsing at Scale</h1>
+          <p>Processing large XML documents requires careful attention to memory usage. Streaming parsers that emit nodes incrementally can handle documents of arbitrary size with constant memory overhead.</p>
+          <table>
+            <thead>
+              <tr><th>Parser</th><th>Memory (MB)</th><th>Time (ms)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>DOM</td><td>512</td><td>2400</td></tr>
+              <tr><td>SAX</td><td>12</td><td>890</td></tr>
+              <tr><td>Streaming</td><td>8</td><td>650</td></tr>
+            </tbody>
+          </table>
+          <p>Special characters like &lt;, &gt;, &amp;, and "quotes" must be handled correctly in both attributes and text content.</p>
+        </article>
+      ]]></content:encoded>
+    </item>
+    <item>
+      <title>Deep Dive: TypeScript Generics &amp; Conditional Types</title>
+      <link>https://example.com/blog/ts-generics</link>
+      <guid isPermaLink="true">https://example.com/blog/ts-generics</guid>
+      <pubDate>Fri, 14 Mar 2025 15:45:00 +0000</pubDate>
+      <dc:creator>Diana</dc:creator>
+      <category>TypeScript</category>
+      <description>An advanced guide to TypeScript's type system</description>
+      <content:encoded><![CDATA[
+        <article>
+          <h1>Deep Dive: TypeScript Generics</h1>
+          <p>TypeScript's type system is <em>Turing complete</em>, allowing for remarkably expressive type-level programming.</p>
+          <pre><code>type DeepPartial&lt;T&gt; = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial&lt;T[P]&gt; : T[P];
+};</code></pre>
+        </article>
+      ]]></content:encoded>
+    </item>
+  </channel>
+</rss>

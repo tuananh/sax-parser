@@ -21,6 +21,65 @@ describe('attribute test', () => {
         expect({}.polluted).toBeUndefined()
     })
 
+    test('attribute named "constructor" is an own property', async () => {
+        const events = await parse('<a constructor="x"/>')
+        const attrs = events[0][2]
+        expect(Object.prototype.hasOwnProperty.call(attrs, 'constructor')).toBe(
+            true,
+        )
+        expect(attrs.constructor).toBe('x')
+        expect(Object.getPrototypeOf(attrs)).toBe(null)
+    })
+
+    test('empty string attribute value', async () => {
+        expect(await parse('<a x=""/>')).toEqual([
+            ['startElement', 'a', { x: '' }],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('attribute value may contain newline', async () => {
+        expect(await parse('<a x="a\nb"/>')).toEqual([
+            ['startElement', 'a', { x: 'a\nb' }],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('attributes separated by newline', async () => {
+        expect(await parse('<a\nx="1"\ny="2"/>')).toEqual([
+            ['startElement', 'a', { x: '1', y: '2' }],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('attribute value may contain >', async () => {
+        expect(await parse('<a x=">"/>')).toEqual([
+            ['startElement', 'a', { x: '>' }],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('mixed quote characters inside attribute values', async () => {
+        expect(await parse(`<a x='"' y="'"/>`)).toEqual([
+            ['startElement', 'a', { x: '"', y: "'" }],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('hyphens and dots in attribute names', async () => {
+        expect(await parse('<a data-x="1" a.b="2"/>')).toEqual([
+            ['startElement', 'a', { 'data-x': '1', 'a.b': '2' }],
+            ['endElement', 'a'],
+        ])
+    })
+
+    test('whitespace between = and quoted value', async () => {
+        expect(await parse('<a id= "x"/>')).toEqual([
+            ['startElement', 'a', { id: 'x' }],
+            ['endElement', 'a'],
+        ])
+    })
+
     test('arity-1 startElement receives name only (consistent with invokeSlot)', () => {
         const xml = '<item id="1"><name>x</name></item>'
         const parser = new SaxParser()
