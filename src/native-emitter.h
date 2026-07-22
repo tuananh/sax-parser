@@ -45,7 +45,7 @@ private:
     saxparser::CollectingSAXDelegator _collectingDelegator;
     std::string _parseInput;
     std::vector<char> _feedXml;
-    std::vector<uint8_t> _dispatchRecords;
+    std::vector<uint32_t> _dispatchRecords;
     std::vector<uint8_t> _dispatchAux;
     Napi::Reference<Napi::Buffer<char>> _xmlBufferRef;
     const char *_xmlDispatchBase;

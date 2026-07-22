@@ -52,7 +52,8 @@ public:
     void setBatchCallback(BatchCallback callback, size_t batchSize = kDefaultBatchSize);
     void clearBatchCallback();
 
-    void reserve(size_t recordBytes, size_t auxBytes);
+    // `recordWords` is uint32 slots (5 per full event, 1 per compact event).
+    void reserve(size_t recordWords, size_t auxBytes);
 
     void pushEvent(uint32_t type, uint32_t arg0, uint32_t arg1, uint32_t arg2 = 0,
                    uint32_t arg3 = 0);
@@ -61,13 +62,15 @@ public:
 
     uint32_t xmlOffset(const char *ptr) const;
 
-    const std::vector<uint8_t> &records() const { return _records; }
+    // Packed as uint32 words so the hot push path can store without memcpy.
+    const std::vector<uint32_t> &records() const { return _records; }
     const std::vector<uint8_t> &aux() const { return _aux; }
     size_t eventCount() const { return _eventCount; }
+    size_t recordCapacityWords() const { return _records.capacity(); }
 
     // Move collected buffers into `records`/`aux` for JS Buffer views, while
     // preserving capacity on both sides via swap (avoids re-reserve on reuse).
-    void releaseInto(std::vector<uint8_t> &records, std::vector<uint8_t> &aux, size_t &eventCount);
+    void releaseInto(std::vector<uint32_t> &records, std::vector<uint8_t> &aux, size_t &eventCount);
 
     void setError(uint32_t code, uint32_t offset);
     uint32_t errorCode() const { return _errorCode; }
@@ -75,7 +78,7 @@ public:
     bool hasError() const { return _errorCode != 0; }
 
 private:
-    std::vector<uint8_t> _records;
+    std::vector<uint32_t> _records;
     std::vector<uint8_t> _aux;
     size_t _eventCount = 0;
     const char *_xmlBase = nullptr;

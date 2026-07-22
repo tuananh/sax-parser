@@ -5,7 +5,7 @@
 namespace saxparser
 {
 
-void EventCollector::releaseInto(std::vector<uint8_t> &records, std::vector<uint8_t> &aux,
+void EventCollector::releaseInto(std::vector<uint32_t> &records, std::vector<uint8_t> &aux,
                                  size_t &eventCount)
 {
     eventCount = _eventCount;
@@ -43,10 +43,12 @@ void EventCollector::clearBatchCallback()
     _batchCallback = nullptr;
 }
 
-void EventCollector::reserve(size_t recordBytes, size_t auxBytes)
+void EventCollector::reserve(size_t recordWords, size_t auxBytes)
 {
-    _records.reserve(recordBytes);
-    _aux.reserve(auxBytes);
+    if (recordWords > _records.capacity())
+        _records.reserve(recordWords);
+    if (auxBytes > _aux.capacity())
+        _aux.reserve(auxBytes);
 }
 
 void EventCollector::maybeFlushBatch()
@@ -80,23 +82,19 @@ void EventCollector::pushEvent(uint32_t type, uint32_t arg0, uint32_t arg1, uint
 {
     if (_compactRecords)
     {
-        writeU32(_records, type);
+        _records.push_back(type);
     }
     else
     {
-        const size_t bytes = sizeof(uint32_t) * 5;
+        // Direct word stores — avoids per-field memcpy through a uint8_t buffer.
         const size_t base = _records.size();
-        _records.resize(base + bytes);
-        uint8_t *p = _records.data() + base;
-        auto putU32 = [&p](uint32_t value) {
-            std::memcpy(p, &value, sizeof(value));
-            p += sizeof(value);
-        };
-        putU32(type);
-        putU32(arg0);
-        putU32(arg1);
-        putU32(arg2);
-        putU32(arg3);
+        _records.resize(base + 5);
+        uint32_t *p = _records.data() + base;
+        p[0] = type;
+        p[1] = arg0;
+        p[2] = arg1;
+        p[3] = arg2;
+        p[4] = arg3;
     }
     _eventCount++;
     maybeFlushBatch();
@@ -133,13 +131,9 @@ uint32_t EventCollector::pushAttributes(const char **attrs, const uint32_t *lens
     const size_t base = _aux.size();
     _aux.resize(base + bytes);
 
-    uint8_t *p = _aux.data() + base;
-    auto putU32 = [&p](uint32_t value) {
-        std::memcpy(p, &value, sizeof(value));
-        p += sizeof(value);
-    };
-
-    putU32(count);
+    uint32_t *p = reinterpret_cast<uint32_t *>(_aux.data() + base);
+    p[0] = count;
+    uint32_t *out = p + 1;
     for (uint32_t i = 0; i < count; i++)
     {
         const char *name = attrs[i * 2];
@@ -149,10 +143,11 @@ uint32_t EventCollector::pushAttributes(const char **attrs, const uint32_t *lens
         const uint32_t valueLen =
             lens != nullptr ? lens[i * 2 + 1] : static_cast<uint32_t>(std::strlen(value));
 
-        putU32(nameLen);
-        putU32(valueLen);
-        putU32(xmlOffset(name));
-        putU32(xmlOffset(value));
+        out[0] = nameLen;
+        out[1] = valueLen;
+        out[2] = xmlOffset(name);
+        out[3] = xmlOffset(value);
+        out += 4;
     }
 
     return blockOffset;

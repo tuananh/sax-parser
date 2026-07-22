@@ -1,5 +1,6 @@
 #include "native-emitter.h"
 
+#include <algorithm>
 #include <utility>
 
 #include "sax-parser.h"
@@ -9,8 +10,9 @@ using namespace saxparser;
 namespace
 {
 
-// Typical document batch sizes — reserve on first collect, keep via releaseInto swap.
-constexpr size_t kRecordBytesReserve = 16 * 1024;
+// Floor reserves. beginEventCollection also sizes from xmlLength so the ~10 KB
+// bench doc (~1266 events × 5 words) does not grow mid-parse.
+constexpr size_t kRecordWordsReserve = 8 * 1024; // 32 KB of uint32 words
 constexpr size_t kAuxBytesReserve = 16 * 1024;
 
 bool functionNeedsArgs(const Napi::Function &fn)
@@ -235,8 +237,17 @@ void SaxParser::MarkListenersDirty(const Napi::CallbackInfo &info)
 void SaxParser::beginEventCollection(const char *xmlBase, size_t xmlLength)
 {
     _collector.clear();
-    _collector.reserve(kRecordBytesReserve, kAuxBytesReserve);
-    _collector.setCompactRecords(_registry->compactRecords());
+    // Heuristic: element-heavy docs average roughly one event per 8–10 input
+    // bytes. Full records are 5 uint32 words; compact is 1. Over-reserve a bit
+    // so pushEvent never reallocates on the hot path.
+    const bool compact = _registry->compactRecords();
+    const size_t estimatedEvents = xmlLength > 0 ? (xmlLength / 6) + 64 : 64;
+    const size_t wordsPerEvent = compact ? 1 : 5;
+    const size_t recordWords =
+        std::max(kRecordWordsReserve, estimatedEvents * wordsPerEvent);
+    const size_t auxBytes = std::max(kAuxBytesReserve, xmlLength / 2);
+    _collector.reserve(recordWords, auxBytes);
+    _collector.setCompactRecords(compact);
     _collector.setXmlBase(xmlBase);
     _xmlDispatchBase = xmlBase;
     _xmlDispatchLength = xmlLength;
@@ -302,8 +313,9 @@ void SaxParser::dispatchCollected(Napi::Env env, const char *xmlData, size_t xml
     if (_dispatchRecords.empty())
         recordBuffer = Napi::Buffer<uint8_t>::New(env, 0);
     else
-        recordBuffer = Napi::Buffer<uint8_t>::New(env, _dispatchRecords.data(),
-                                                  _dispatchRecords.size(), noopFinalizer);
+        recordBuffer = Napi::Buffer<uint8_t>::New(
+            env, reinterpret_cast<uint8_t *>(_dispatchRecords.data()),
+            _dispatchRecords.size() * sizeof(uint32_t), noopFinalizer);
 
     // Compact records: one uint32 type per event — no aux, no xml marshalling.
     if (_registry->compactRecords() && !_dispatchCompactFn.IsEmpty())
